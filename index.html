@@ -1,0 +1,379 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Water Cooler em Fluxo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Simulador interativo do water cooler – A3 de Sistemas Fluidomecânicos, Grupo 3 (UNP)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Saira+Condensed:wght@500;600;700&display=swap">
+
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#bancada">A3 · Grupo 3</a>
+    <nav aria-label="Seções">
+      <a href="#bancada">Bancada</a>
+      <a href="#escoamento">Escoamento</a>
+      <a href="#curvas">Curvas</a>
+      <a href="#controle">Controle</a>
+      <a href="#falhas">Falhas</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#equipe">Equipe</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap" id="bancada">
+    <div class="hero-text">
+      <p class="eyebrow">Sistemas Fluidomecânicos · Tema 01 · UNP</p>
+      <h1>O caminho da água num water cooler</h1>
+      <p class="lede">Mexa na bomba, na carga e nas ventoinhas e veja a vazão, o regime de escoamento, as perdas de carga e as temperaturas mudarem em tempo real. Os números de referência são os do exemplo do relatório.</p>
+    </div>
+
+    <div class="bench">
+      <figure class="loop-panel" aria-label="Ilustração animada do circuito do water cooler">
+        <svg id="loop" viewBox="0 0 640 420" role="img" aria-labelledby="loopTitle">
+          <title id="loopTitle">Circuito: reservatório, bomba, bloco da CPU, bloco da GPU e radiador</title>
+          <defs>
+            <pattern id="fins" width="6" height="10" patternUnits="userSpaceOnUse">
+              <rect width="6" height="10" fill="var(--rad-bg)"/>
+              <rect width="1.6" height="10" fill="var(--rad-fin)"/>
+            </pattern>
+            <linearGradient id="copper" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#d8955a"/>
+              <stop offset="0.5" stop-color="#b87333"/>
+              <stop offset="1" stop-color="#8a5226"/>
+            </linearGradient>
+            <linearGradient id="liquid" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="var(--cold)" stop-opacity="0.55"/>
+              <stop offset="1" stop-color="var(--cold)" stop-opacity="0.9"/>
+            </linearGradient>
+          </defs>
+
+          <!-- tubos: base colorida pela temperatura + traço animado do escoamento -->
+          <g class="tubes" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path id="t1" class="tube" d="M75 248 V160"/>
+            <path id="t2" class="tube" d="M112 112 H222"/>
+            <path id="t3" class="tube" d="M358 100 H412"/>
+            <path id="t4" class="tube" d="M568 100 H612 V318 H596"/>
+            <path id="t5" class="tube" d="M300 318 H112"/>
+            <path class="flow" d="M75 248 V160"/>
+            <path class="flow" d="M112 112 H222"/>
+            <path class="flow" d="M358 100 H412"/>
+            <path class="flow" d="M568 100 H612 V318 H596"/>
+            <path class="flow" d="M300 318 H112"/>
+          </g>
+
+          <!-- reservatório -->
+          <g>
+            <rect x="40" y="248" width="70" height="132" rx="10" fill="var(--glass)" stroke="var(--line-strong)" stroke-width="2"/>
+            <rect id="resLiquid" x="44" y="276" width="62" height="100" rx="6" fill="url(#liquid)"/>
+            <ellipse id="bubble" cx="75" cy="300" rx="6" ry="5" fill="var(--surface)" opacity="0"/>
+            <text x="75" y="400" class="svg-label" text-anchor="middle">Reservatório</text>
+          </g>
+
+          <!-- bomba -->
+          <g>
+            <circle cx="75" cy="112" r="40" fill="var(--metal)" stroke="var(--line-strong)" stroke-width="2"/>
+            <g id="pumpRotor" transform="rotate(0 75 112)">
+              <circle cx="75" cy="112" r="7" fill="var(--ink)"/>
+              <path d="M75 112 L75 80 M75 112 L105 122 M75 112 L56 138 M75 112 L45 101 M75 112 L96 87" stroke="var(--ink)" stroke-width="5" stroke-linecap="round"/>
+            </g>
+            <text x="75" y="44" class="svg-label" text-anchor="middle">Bomba</text>
+          </g>
+
+          <!-- bloco CPU -->
+          <g>
+            <rect id="cpuGlow" x="226" y="134" width="128" height="16" rx="3" fill="var(--hot)" opacity="0.4"/>
+            <rect x="222" y="56" width="136" height="80" rx="8" fill="url(#copper)" stroke="var(--line-strong)" stroke-width="2"/>
+            <g stroke="#6e3f1b" stroke-width="2" opacity="0.7">
+              <path d="M240 76 V118 M250 76 V118 M260 76 V118 M270 76 V118 M280 76 V118 M290 76 V118 M300 76 V118 M310 76 V118 M320 76 V118 M330 76 V118 M340 76 V118"/>
+            </g>
+            <text x="290" y="44" class="svg-label" text-anchor="middle">Bloco da CPU · microcanais</text>
+            <text id="cpuTempTxt" x="290" y="170" class="svg-value" text-anchor="middle">CPU 51 °C</text>
+          </g>
+
+          <!-- bloco GPU -->
+          <g>
+            <rect id="gpuGlow" x="416" y="134" width="148" height="16" rx="3" fill="var(--hot)" opacity="0.3"/>
+            <rect x="412" y="62" width="156" height="74" rx="8" fill="var(--metal)" stroke="var(--line-strong)" stroke-width="2"/>
+            <rect x="430" y="78" width="120" height="42" rx="4" fill="url(#copper)" opacity="0.9"/>
+            <text x="490" y="44" class="svg-label" text-anchor="middle">Bloco da GPU</text>
+            <text id="gpuTempTxt" x="490" y="170" class="svg-value" text-anchor="middle">GPU 40 °C</text>
+          </g>
+
+          <!-- radiador e ventoinhas -->
+          <g>
+            <rect x="296" y="282" width="304" height="72" rx="6" fill="url(#fins)" stroke="var(--line-strong)" stroke-width="2"/>
+            <g id="fans">
+              <g class="fan" data-cx="347" data-cy="318"><circle cx="347" cy="318" r="30" fill="var(--fan-bg)" stroke="var(--line-strong)"/><g class="blades"></g></g>
+              <g class="fan" data-cx="448" data-cy="318"><circle cx="448" cy="318" r="30" fill="var(--fan-bg)" stroke="var(--line-strong)"/><g class="blades"></g></g>
+              <g class="fan" data-cx="549" data-cy="318"><circle cx="549" cy="318" r="30" fill="var(--fan-bg)" stroke="var(--line-strong)"/><g class="blades"></g></g>
+            </g>
+            <text x="448" y="380" class="svg-label" text-anchor="middle">Radiador 360 mm · 3 ventoinhas</text>
+            <g id="airArrows" class="air" stroke="var(--muted)" stroke-width="2" fill="none">
+              <path d="M347 404 v-14 m-5 5 l5 -5 l5 5"/><path d="M448 404 v-14 m-5 5 l5 -5 l5 5"/><path d="M549 404 v-14 m-5 5 l5 -5 l5 5"/>
+            </g>
+          </g>
+
+          <!-- sensores -->
+          <g class="sensor"><circle cx="168" cy="112" r="7"/><text x="168" y="140" text-anchor="middle">S1 <tspan id="s1Txt">1,50 L/min</tspan></text></g>
+          <g class="sensor"><circle cx="612" cy="200" r="7"/><text x="604" y="226" text-anchor="end">S2 <tspan id="s2Txt">32 °C</tspan></text></g>
+          <g class="sensor"><circle cx="206" cy="318" r="7"/><text x="206" y="300" text-anchor="middle">S3 <tspan id="s3Txt">30 °C</tspan></text></g>
+          <g class="sensor"><circle cx="126" cy="78" r="7"/><text x="134" y="64">S4 <tspan id="s4Txt">4.800 rpm</tspan></text></g>
+        </svg>
+        <figcaption>Ilustração do circuito, desenhada pelo grupo. O tracejado se move na velocidade do escoamento e a cor do tubo segue a temperatura da água.</figcaption>
+        <div id="alert" class="alert" role="status" aria-live="polite" hidden></div>
+      </figure>
+
+      <form class="controls" id="controls" aria-label="Controles da bancada" autocomplete="off">
+        <div class="presets" role="group" aria-label="Cenários prontos">
+          <button type="button" data-preset="ref">Exemplo do relatório</button>
+          <button type="button" data-preset="pwm70">Bomba a 70 %</button>
+          <button type="button" data-preset="max">Carga máxima</button>
+        </div>
+
+        <fieldset class="seg">
+          <legend>Controle</legend>
+          <label><input type="radio" name="mode" id="modeManual" value="manual" checked> Manual</label>
+          <label><input type="radio" name="mode" id="modeAuto" value="auto"> Automático (curva pela T da água)</label>
+        </fieldset>
+
+        <div class="slider">
+          <label for="pump">PWM da bomba <output id="pumpOut">100 %</output></label>
+          <input type="range" id="pump" min="0" max="100" step="1" value="100">
+        </div>
+        <div class="slider">
+          <label for="fan">PWM das ventoinhas <output id="fanOut">100 %</output></label>
+          <input type="range" id="fan" min="0" max="100" step="1" value="100">
+        </div>
+        <div class="slider">
+          <label for="cpu">Carga da CPU <output id="cpuOut">250 W</output></label>
+          <input type="range" id="cpu" min="0" max="300" step="5" value="250">
+        </div>
+        <div class="slider">
+          <label for="gpu">Carga da GPU <output id="gpuOut">0 W</output></label>
+          <input type="range" id="gpu" min="0" max="400" step="5" value="0">
+        </div>
+
+        <div class="field">
+          <label for="fluid">Fluido</label>
+          <select id="fluid"></select>
+        </div>
+
+        <fieldset class="seg faults">
+          <legend>Simular falha</legend>
+          <label><input type="radio" name="fault" id="fNone" value="none" checked> Normal</label>
+          <label><input type="radio" name="fault" id="fStopped" value="stopped"> Bomba parada</label>
+          <label><input type="radio" name="fault" id="fAir" value="air"> Ar no circuito</label>
+          <label><input type="radio" name="fault" id="fClog" value="clog"> Microcanais entupidos</label>
+        </fieldset>
+
+        <label class="switch"><input type="checkbox" id="diag" checked> Diagnóstico de vazão (proposta de melhoria)</label>
+      </form>
+    </div>
+
+    <div class="gauges" id="gauges" aria-label="Leituras">
+      <div class="gauge"><span class="g-label">Vazão</span><span class="g-val" id="gQ">1,50</span><span class="g-unit">L/min</span></div>
+      <div class="gauge"><span class="g-label">Reynolds</span><span class="g-val" id="gRe">4.394</span><span class="chip" id="gRegime">turbulento</span></div>
+      <div class="gauge"><span class="g-label">Perda de carga</span><span class="g-val" id="gDp">2.086</span><span class="g-unit">Pa</span></div>
+      <div class="gauge"><span class="g-label">Potência hidráulica</span><span class="g-val" id="gP">0,052</span><span class="g-unit">W</span></div>
+      <div class="gauge"><span class="g-label">ΔT da água</span><span class="g-val" id="gDt">2,4</span><span class="g-unit">K</span></div>
+      <div class="gauge"><span class="g-label">CPU</span><span class="g-val" id="gCpu">51</span><span class="g-unit">°C</span><span class="bar"><i id="gCpuBar"></i></span></div>
+    </div>
+  </section>
+
+  <section class="band" id="escoamento">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="eyebrow">Conceitos de fluidos</p>
+        <h2>Como a água escoa no circuito</h2>
+        <p>Cada cartão usa os valores atuais da bancada. Mude a bomba ou o fluido lá em cima e volte aqui.</p>
+      </header>
+
+      <div class="re-panel">
+        <div class="re-canvas-wrap">
+          <canvas id="reCanvas" width="900" height="260" aria-label="Partículas escoando na mangueira"></canvas>
+          <div class="re-legend"><span>Mangueira Ø 10 mm</span><span id="reCaption">Re ≈ 4.394 · turbulento</span></div>
+        </div>
+        <div class="re-scale" aria-hidden="true">
+          <div class="re-band lam">Laminar<br><small>Re &lt; 2.300</small></div>
+          <div class="re-band tra">Transição</div>
+          <div class="re-band tur">Turbulento<br><small>Re &gt; 4.000</small></div>
+          <div class="re-marker" id="reMarker"></div>
+        </div>
+      </div>
+
+      <div class="concepts">
+        <article class="concept">
+          <h3>Massa específica</h3>
+          <p class="formula">ρ = m / V</p>
+          <p>Massa por unidade de volume. Entra no Reynolds e na pressão dinâmica.</p>
+          <p class="live">ρ = <b id="cRho">994</b> kg/m³</p>
+        </article>
+        <article class="concept">
+          <h3>Viscosidade</h3>
+          <p class="formula">μ</p>
+          <p>Atrito interno do fluido. Com glicol ela dobra, a perda de carga sobe e a vazão cai.</p>
+          <p class="live">μ = <b id="cMu">0,72</b> mPa·s</p>
+        </article>
+        <article class="concept">
+          <h3>Vazão e continuidade</h3>
+          <p class="formula">Q = V · A</p>
+          <p>A mesma vazão passa em todo o circuito. Onde a área é menor, a água acelera.</p>
+          <div class="cont">
+            <div><span class="pipe wide"></span><span>Mangueira <b id="cV">0,32</b> m/s</span></div>
+            <div><span class="pipe narrow"></span><span>Microcanais <b id="cVc">0,63</b> m/s</span></div>
+          </div>
+        </article>
+        <article class="concept">
+          <h3>Número de Reynolds</h3>
+          <p class="formula">Re = ρ · V · D / μ</p>
+          <p>Compara inércia e viscosidade e define o regime do escoamento.</p>
+          <p class="live">Re = <b id="cRe">4.394</b></p>
+        </article>
+        <article class="concept">
+          <h3>Perda distribuída</h3>
+          <p class="formula">Δp = f · (L/D) · ρV²/2</p>
+          <p>Atrito ao longo de 1,2 m de mangueira. f vem de 64/Re ou de Blasius.</p>
+          <p class="live">f = <b id="cF">0,0388</b> · Δp = <b id="cDd">235</b> Pa</p>
+        </article>
+        <article class="concept">
+          <h3>Perda localizada</h3>
+          <p class="formula">Δp = ΣK · ρV²/2</p>
+          <p>Conexões, curvas e entradas dos componentes, com ΣK = 5,0.</p>
+          <p class="live">Δp = <b id="cDl">252</b> Pa</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap section" id="curvas">
+    <header class="sec-head">
+      <p class="eyebrow">Bomba e sistema</p>
+      <h2>Onde a bomba encontra o circuito</h2>
+      <p>O ponto de operação é onde a pressão que a bomba fornece iguala a perda de carga do circuito. Diminuir o PWM achata a curva da bomba e o ponto desce pela curva do sistema.</p>
+    </header>
+    <div class="curves">
+      <div class="chart-wrap"><svg id="chart" viewBox="0 0 560 340" role="img" aria-label="Curva da bomba e curva do sistema"></svg></div>
+      <div class="curve-side">
+        <h3>Para onde vai a pressão</h3>
+        <div class="stack" id="stack" aria-label="Divisão da perda de carga">
+          <i class="s-dist"></i><i class="s-loc"></i><i class="s-comp"></i>
+        </div>
+        <ul class="stack-legend">
+          <li><span class="sw s-dist"></span>Distribuída <b id="lDist">235 Pa</b></li>
+          <li><span class="sw s-loc"></span>Localizada <b id="lLoc">252 Pa</b></li>
+          <li><span class="sw s-comp"></span>Bloco + radiador <b id="lComp">1.600 Pa</b></li>
+        </ul>
+        <div class="affinity">
+          <h3>Leis de semelhança</h3>
+          <p class="formula">Q ∝ n · Δp ∝ n² · P ∝ n³</p>
+          <p id="affText">Com a bomba a 100 %, a potência hidráulica é 0,052 W.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="controle">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="eyebrow">Integração com a Computação</p>
+        <h2>Medir, decidir, agir</h2>
+        <p>Um microcontrolador ou a placa-mãe repete este ciclo a cada segundo. A etapa acesa é a que está rodando agora, com as leituras da bancada.</p>
+      </header>
+      <div class="control-grid">
+        <ol class="cycle" id="cycle">
+          <li data-step="0"><b>Ler sensores</b><span id="stepRead">S1 1,50 L/min · S2 32 °C · S3 30 °C · S4 4.800 rpm</span></li>
+          <li data-step="1"><b>Processar</b><span id="stepProc">média móvel · ΔT = S2 − S3 = 2,4 K</span></li>
+          <li data-step="2"><b>Verificar falha</b><span id="stepCheck">vazão ≥ 0,5 L/min e bomba girando: ok</span></li>
+          <li data-step="3"><b>Calcular o PWM</b><span id="stepCurve">manual: bomba 100 %, ventoinhas 100 %</span></li>
+          <li data-step="4"><b>Enviar PWM de 25 kHz</b><span id="stepSend">bomba e ventoinhas</span></li>
+        </ol>
+        <div class="pwm-box">
+          <h3>Sinal PWM</h3>
+          <div class="pwm-row"><span>Bomba</span><svg id="pwmPump" viewBox="0 0 300 50" preserveAspectRatio="none" aria-hidden="true"></svg><b id="pwmPumpTxt">100 %</b></div>
+          <div class="pwm-row"><span>Ventoinhas</span><svg id="pwmFan" viewBox="0 0 300 50" preserveAspectRatio="none" aria-hidden="true"></svg><b id="pwmFanTxt">100 %</b></div>
+          <p class="small">O duty cycle é a fração do período em nível alto. 70 % de duty dá cerca de 70 % da rotação máxima.</p>
+          <h3>Registro (log)</h3>
+          <div class="log-wrap">
+            <table class="log">
+              <thead><tr><th>t (s)</th><th>Q (L/min)</th><th>T água (°C)</th><th>CPU (°C)</th><th>Bomba</th></tr></thead>
+              <tbody id="logBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap section" id="falhas">
+    <header class="sec-head">
+      <p class="eyebrow">Limitação e melhoria</p>
+      <h2>Quando a água para</h2>
+      <p>Escolha uma falha. A bancada no topo passa a rodar com ela. Compare com o diagnóstico de vazão ligado e desligado.</p>
+    </header>
+    <div class="faults-grid">
+      <button type="button" class="fault-card" data-fault="stopped">
+        <b>Bomba parada</b>
+        <span>O tacômetro marca 0 rpm e a vazão vai a zero. A CPU passa de 90 °C em segundos.</span>
+      </button>
+      <button type="button" class="fault-card" data-fault="air">
+        <b>Ar no circuito</b>
+        <span>A bomba gira normalmente, mas o rotor bate em bolha e a vazão despenca. Só o sensor de fluxo percebe.</span>
+      </button>
+      <button type="button" class="fault-card" data-fault="clog">
+        <b>Microcanais entupidos</b>
+        <span>A perda no bloco quintuplica. A vazão cai aos poucos e o ΔT da água sobe com a mesma carga.</span>
+      </button>
+      <button type="button" class="fault-card ok" data-fault="none">
+        <b>Voltar ao normal</b>
+        <span>Circuito limpo e bomba funcionando.</span>
+      </button>
+    </div>
+    <div class="proposal">
+      <h3>Proposta do grupo</h3>
+      <p>Instalar um sensor de vazão e verificar três condições a cada ciclo: <b>vazão abaixo de 0,5 L/min</b>, <b>bomba com 0 rpm</b> ou <b>ΔT da água subindo com a mesma carga</b>. Ao detectar qualquer uma delas, o sistema leva o PWM a 100 %, avisa o usuário e reduz o clock antes do desligamento por temperatura.</p>
+    </div>
+  </section>
+
+  <section class="band" id="quiz">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="eyebrow">Para treinar a apresentação</p>
+        <h2>Perguntas que o professor pode fazer</h2>
+        <p>Tente responder em voz alta antes de abrir a resposta. <span id="quizScore">0 de 8 abertas</span></p>
+      </header>
+      <div class="quiz" id="quizList"></div>
+    </div>
+  </section>
+
+  <section class="wrap section" id="equipe">
+    <header class="sec-head">
+      <p class="eyebrow">Grupo 3</p>
+      <h2>Equipe e referências</h2>
+    </header>
+    <div class="team-grid">
+      <ul class="team">
+        <li><b>Alexandre Pinho do Rosario Filho</b><span>Problema e sistema</span></li>
+        <li><b>Carlos Henrique Pereira da Silva</b><span>Massa específica, viscosidade e Reynolds</span></li>
+        <li><b>Daniela Brito da Silva</b><span>Perdas de carga, bomba e sensores</span></li>
+        <li><b>Raffael Morais Dutra</b><span>Exemplo numérico</span></li>
+        <li><b>Victor Hugo Paiva dos Santos</b><span>PWM, falhas e conclusão</span></li>
+      </ul>
+      <div class="refs">
+        <p>Prof. Dr. Ronyclei Raimundo da Silva · Universidade Potiguar · 2026</p>
+        <ol>
+          <li>ÇENGEL, Y. A.; CIMBALA, J. M. <i>Mecânica dos fluidos: fundamentos e aplicações</i>. 3. ed. AMGH, 2015.</li>
+          <li>FOX, R. W.; McDONALD, A. T.; PRITCHARD, P. J. <i>Introdução à mecânica dos fluidos</i>. 8. ed. LTC, 2014.</li>
+          <li>INCROPERA, F. P. et al. <i>Fundamentos de transferência de calor e de massa</i>. 6. ed. LTC, 2008.</li>
+          <li>INTEL. <i>4-Wire Pulse Width Modulation (PWM) Controlled Fans</i>. Rev. 1.3, 2005.</li>
+          <li>WHITE, F. M. <i>Mecânica dos fluidos</i>. 6. ed. AMGH, 2011.</li>
+        </ol>
+        <p class="small">Os dados do circuito são hipotéticos e o modelo térmico é simplificado, para fins didáticos. A parte hidráulica reproduz o exemplo numérico do relatório.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="module" src="/src/main.ts"></script>
