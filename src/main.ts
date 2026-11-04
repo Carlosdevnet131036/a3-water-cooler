@@ -1,7 +1,11 @@
 import "./style.css";
-import { FLUIDS, GEO, T_AMB, solve, systemLoss, pumpPressure, thermalTargets } from "./model";
-import type { Fault, Fluid, Hydraulics } from "./model";
+import { FLUIDS, GEO, T_AMB, solve, systemLoss, pumpPressure } from "./model";
+import type { Fault } from "./model";
 import { QUIZ } from "./quiz";
+import { referenceInputs, createSimulation, advanceSimulation } from "./simulation";
+import { renderCalculations } from "./calculations";
+import { renderHistory, runComparison } from "./history";
+import type { Sample, SimEvent } from "./history";
 
 // ---------- utilidades ----------
 const $ = <T extends Element = HTMLElement>(sel: string) => document.querySelector(sel) as T;
@@ -14,18 +18,10 @@ const setText = (sel: string, text: string) => { const el = $(sel); if (el.textC
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
 // ---------- estado ----------
-type Mode = "manual" | "auto";
-const input = {
-  pump: 100, fan: 100, cpu: 250, gpu: 0,
-  fluid: FLUIDS[0] as Fluid, fault: "none" as Fault, mode: "manual" as Mode, diag: true,
-};
-
-let hyd: Hydraulics = solve(1, input.fluid, "none");
-const t0 = thermalTargets(input.cpu, input.gpu, hyd.q, 1, input.fluid);
-const sim = {
-  time: 0, tCold: t0.tCold, tMid: t0.tMid, tHot: t0.tHot, tCpu: t0.tCpu, tGpu: t0.tGpu,
-  power: 1, pumpEff: 100, fanEff: 100, rpm: 4800, alarm: "" as "" | "flow" | "rpm", warn: false, throttling: false,
-};
+const input = referenceInputs();
+const sim = createSimulation(input);
+let hyd = sim.hyd;
+let paused = false;
 
 // ---------- controles ----------
 const pumpIn = $<HTMLInputElement>("#pump");
@@ -38,6 +34,8 @@ const diagIn = $<HTMLInputElement>("#diag");
 for (const f of FLUIDS) fluidSel.add(new Option(f.name, f.id));
 
 function readInputs() {
+  const previousFault = input.fault;
+  const previousDiag = input.diag;
   input.pump = +pumpIn.value;
   input.fan = +fanIn.value;
   input.cpu = +cpuIn.value;
@@ -46,10 +44,18 @@ function readInputs() {
   input.mode = ($<HTMLInputElement>("#modeAuto").checked ? "auto" : "manual");
   input.fault = ($<HTMLInputElement>('input[name="fault"]:checked').value as Fault);
   input.diag = diagIn.checked;
+  sim.alarm = "";
+  if (previousFault !== "none" && input.fault === "none") sim.recoveryUntil = sim.time + 40;
   pumpIn.disabled = fanIn.disabled = input.mode === "auto";
+  if (previousFault !== input.fault) addEvent(`Falha: ${faultName(input.fault)}`);
+  if (previousDiag !== input.diag) addEvent(`Diagnóstico ${input.diag ? "ligado" : "desligado"}`);
+  advanceSimulation(input, sim, 0);
+  hyd = sim.hyd;
   setText("#cpuOut", `${input.cpu} W`);
   setText("#gpuOut", `${input.gpu} W`);
   $$<HTMLButtonElement>(".fault-card").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.fault === input.fault)));
+  updateText();
+  if (previousFault !== input.fault || previousDiag !== input.diag) recordSample();
 }
 $("#controls").addEventListener("input", readInputs);
 $("#controls").addEventListener("change", readInputs);
@@ -79,44 +85,18 @@ $$<HTMLButtonElement>("[data-preset]").forEach((b) =>
     fluidSel.value = "agua";
     $<HTMLInputElement>("#modeManual").checked = true;
     setFault("none");
+    resetExperiment();
   }),
 );
 
 // ---------- simulação ----------
 function step(dt: number) {
-  sim.time += dt;
-  const auto = input.mode === "auto";
-  let pump = auto ? clamp(40 + (sim.tHot - 30) * 6, 40, 100) : input.pump;
-  let fan = auto ? clamp(30 + (sim.tHot - 30) * 5, 30, 100) : input.fan;
-  if (sim.alarm) { pump = 100; fan = 100; }
-  sim.pumpEff = pump; sim.fanEff = fan;
-  if (auto) { pumpIn.value = String(Math.round(pump)); fanIn.value = String(Math.round(fan)); }
-
-  const n = pump / 100;
-  hyd = solve(n, input.fluid, input.fault);
-  sim.rpm = input.fault === "stopped" ? 0 : 4800 * n * (input.fault === "air" ? 1.06 : 1);
-
-  // diagnóstico de vazão (proposta de melhoria)
-  const flowLow = hyd.q < 0.5;
-  const rpmZero = sim.rpm < 1;
-  sim.alarm = input.diag && (rpmZero || flowLow) ? (rpmZero ? "rpm" : "flow") : "";
-  sim.warn = input.diag && !sim.alarm && sim.tHot - sim.tCold > 4;
-
-  // limite de potência: alerta do diagnóstico ou throttling da BIOS a 100 °C
-  let target = 1;
-  if (sim.alarm) target = 0.35;
-  const tMax = Math.max(sim.tCpu, sim.tGpu);
-  sim.throttling = sim.throttling ? tMax >= 90 && !sim.alarm : tMax >= 99;
-  if (sim.throttling) sim.power = clamp(sim.power - (tMax - 96) * 0.08 * dt, 0.15, 1);
-  else sim.power += (target - sim.power) * clamp(dt * (target < sim.power ? 3 : 0.4), 0, 1);
-
-  const tg = thermalTargets(input.cpu * sim.power, input.gpu * sim.power, hyd.q, fan / 100, input.fluid);
-  const kw = clamp(dt / 10, 0, 1), kc = clamp(dt / 2.2, 0, 1);
-  sim.tCold += (tg.tCold - sim.tCold) * kw;
-  sim.tMid += (tg.tMid - sim.tMid) * kw;
-  sim.tHot += (tg.tHot - sim.tHot) * kw;
-  sim.tCpu += (tg.tCpu - sim.tCpu) * kc;
-  sim.tGpu += (tg.tGpu - sim.tGpu) * kc;
+  advanceSimulation(input, sim, dt);
+  hyd = sim.hyd;
+  if (input.mode === "auto") {
+    pumpIn.value = String(Math.round(sim.pumpEff));
+    fanIn.value = String(Math.round(sim.fanEff));
+  }
 }
 
 // ---------- cores pela temperatura ----------
@@ -209,7 +189,7 @@ function drawReynolds(dt: number) {
   ctx.fillStyle = tempColor(sim.tCold + (sim.tHot - sim.tCold) * 0.5);
   for (const p of parts) {
     const prof = tb > 0 ? (1 - tb) * (1 - p.y * p.y) + tb * Math.pow(1 - Math.abs(p.y), 1 / 7) : 1 - p.y * p.y;
-    if (!reduceMotion.matches) {
+    if (!reduceMotion.matches && dt > 0) {
       p.x += umax * prof * dt * (1 + tb * (Math.random() - 0.5) * 0.6);
       p.y += tb * (Math.random() - 0.5) * 0.35 * Math.min(1, hyd.v * 4);
       if (p.y > 0.98) p.y = 1.96 - p.y;
@@ -251,7 +231,7 @@ function drawChart() {
   g += `<line class="axis" x1="${CH.x0}" x2="${CH.x0}" y1="${CH.y0}" y2="${CH.y0 - CH.h}"/>`;
   g += `<text x="${CH.x0 + CH.w / 2}" y="${CH.y0 + 36}" text-anchor="middle">Vazão Q (L/min)</text>`;
   g += `<text x="14" y="${CH.y0 - CH.h / 2}" text-anchor="middle" transform="rotate(-90 14 ${CH.y0 - CH.h / 2})">Pressão (Pa)</text>`;
-  g += `<path class="pump100" d="${pts((q) => pumpPressure(q, 1, input.fault))}"/>`;
+  g += `<path class="pump100" d="${pts((q) => pumpPressure(q, 1, "none"))}"/>`;
   g += `<path class="pump" d="${pts((q) => pumpPressure(q, n, input.fault))}"/>`;
   g += `<path class="sys" d="${pts((q) => systemLoss(q, input.fluid, input.fault).dpTotal)}"/>`;
   const ox = sx(hyd.q), oy = sy(hyd.dpTotal);
@@ -261,7 +241,7 @@ function drawChart() {
   g += `<g transform="translate(${CH.x0 + 14} ${CH.y0 - CH.h + 6})">
     <line class="sys" x1="0" x2="22" y1="0" y2="0"/><text x="28" y="4">Sistema</text>
     <line class="pump" x1="92" x2="114" y1="0" y2="0"/><text x="120" y="4">Bomba a ${F0.format(sim.pumpEff)} %</text>
-    <line class="pump100" x1="0" x2="22" y1="18" y2="18"/><text x="28" y="22">Bomba a 100 %</text></g>`;
+    <line class="pump100" x1="0" x2="22" y1="18" y2="18"/><text x="28" y="22">Referência saudável 100 %</text></g>`;
   chart.innerHTML = g;
 }
 
@@ -312,13 +292,11 @@ function updateText() {
 
   // alerta
   const alert = $("#alert");
-  let msg = "", warn = false;
-  if (sim.alarm === "rpm") msg = "Alerta: bomba parada (S4 = 0 rpm). PWM em 100 %, aviso ao usuário e clock reduzido.";
-  else if (sim.alarm === "flow") msg = "Alerta: vazão abaixo de 0,5 L/min mesmo com a bomba girando. Possível ar no circuito. PWM em 100 % e clock reduzido.";
-  else if (sim.throttling) msg = "Thermal throttling: o chip chegou a 100 °C e reduziu a frequência sozinho. Sem diagnóstico, a falha só aparece agora.";
-  else if (sim.warn) { msg = "Atenção: ΔT da água acima de 4 K. A vazão está baixa para essa carga; verifique entupimento."; warn = true; }
-  alert.hidden = !msg;
-  if (msg) { setText("#alert", msg); alert.classList.toggle("warn", warn); }
+  const diagnosis = sim.diagnosis;
+  alert.hidden = !diagnosis.message;
+  setText("#alert", diagnosis.message);
+  alert.classList.toggle("warn", diagnosis.warning);
+  setText("#experimentStatus", `${paused ? "Pausado" : "Em execução"} · ${F0.format(sim.time)} s`);
 
   // conceitos
   setText("#cRho", F0.format(fl.rho));
@@ -331,6 +309,7 @@ function updateText() {
   setText("#cDl", F0.format(hyd.dpLocal));
   $<HTMLElement>(".pipe.wide").style.setProperty("--dur", `${clamp(0.06 / Math.max(hyd.v, 0.005), 0.05, 20)}s`);
   $<HTMLElement>(".pipe.narrow").style.setProperty("--dur", `${clamp(0.06 / Math.max(hyd.vChannel, 0.005), 0.05, 20)}s`);
+  $$(".pipe").forEach(p => p.classList.toggle("paused", paused || hyd.q === 0));
   setText("#reCaption", `V = ${F2.format(hyd.v)} m/s · Re ≈ ${F0.format(hyd.re)} · ${hyd.regime}`);
   const pos = clamp(hyd.re / 6000, 0, 1);
   $("#reMarker").style.left = `${pos * 100}%`;
@@ -342,19 +321,19 @@ function updateText() {
   setText("#lDist", `${F0.format(hyd.dpDist)} Pa`);
   setText("#lLoc", `${F0.format(hyd.dpLocal)} Pa`);
   setText("#lComp", `${F0.format(hyd.dpComp)} Pa`);
-  const ref = solve(1, fl, input.fault);
+  const ref = solve(1, fl, "none");
   const ratio = ref.pHyd > 0 ? hyd.pHyd / ref.pHyd : 0;
-  setText("#affText", sim.pumpEff >= 99.5
+  setText("#affText", input.fault !== "none"
+    ? "Há uma falha ativa: compare a curva atual com a referência saudável. As leis de semelhança isoladas não descrevem uma mudança de falha."
+    : sim.pumpEff >= 99.5
     ? `Com a bomba a 100 %, a vazão é ${F2.format(hyd.q)} L/min e a potência hidráulica é ${F3.format(hyd.pHyd)} W. Baixe o PWM para ver as leis em ação.`
     : `Com a bomba a ${F0.format(sim.pumpEff)} %, a vazão é ${F0.format((hyd.q / Math.max(ref.q, 1e-6)) * 100)} % da vazão a 100 % e a potência hidráulica cai para ${F0.format(ratio * 100)} % (${F3.format(hyd.pHyd)} W).`);
   drawChart();
 
   // controle
   setText("#stepRead", `S1 ${F2.format(hyd.q)} L/min · S2 ${F1.format(sim.tHot)} °C · S3 ${F1.format(sim.tCold)} °C · S4 ${F0.format(sim.rpm)} rpm`);
-  setText("#stepProc", `média móvel · ΔT = S2 − S3 = ${F1.format(Math.max(0, sim.tHot - sim.tCold))} K`);
-  setText("#stepCheck", !input.diag ? "diagnóstico desligado: nada é verificado"
-    : sim.alarm ? (sim.alarm === "rpm" ? "bomba com 0 rpm: ALERTA" : "vazão < 0,5 L/min: ALERTA")
-    : "vazão ≥ 0,5 L/min e bomba girando: ok");
+  setText("#stepProc", `ΔT = S2 − S3 = ${F1.format(Math.max(0, sim.tHot - sim.tCold))} K`);
+  setText("#stepCheck", sim.diagnosis.label);
   setText("#stepCurve", sim.alarm ? "falha detectada: bomba e ventoinhas em 100 %"
     : input.mode === "auto" ? `curva pela T da água (${F1.format(sim.tHot)} °C): bomba ${F0.format(sim.pumpEff)} %, ventoinhas ${F0.format(sim.fanEff)} %`
     : `manual: bomba ${F0.format(sim.pumpEff)} %, ventoinhas ${F0.format(sim.fanEff)} %`);
@@ -362,6 +341,8 @@ function updateText() {
   $("#pwmFan").innerHTML = pwmPath(sim.fanEff);
   setText("#pwmPumpTxt", `${F0.format(sim.pumpEff)} %`);
   setText("#pwmFanTxt", `${F0.format(sim.fanEff)} %`);
+  renderCalculations(input, sim);
+  updatePresentation();
 }
 
 function updateCycle(dt: number) {
@@ -373,12 +354,130 @@ function updateCycle(dt: number) {
   });
   const sec = Math.floor(sim.time);
   if (sec !== lastLog) {
+    recordSample();
     lastLog = sec;
-    logRows.unshift(`<tr><td>${sec}</td><td class="${hyd.q < 0.5 ? "bad" : ""}">${F2.format(hyd.q)}</td><td>${F1.format(sim.tHot)}</td><td class="${sim.tCpu >= 90 ? "bad" : ""}">${F0.format(sim.tCpu)}</td><td>${F0.format(sim.pumpEff)} %</td></tr>`);
-    if (logRows.length > 6) logRows.pop();
-    $("#logBody").innerHTML = logRows.join("");
   }
 }
+
+// ---------- experimentos e registro ----------
+const samples: Sample[] = [];
+const events: SimEvent[] = [];
+let lastDiagnosis = sim.diagnosis.state;
+const faultName = (f: Fault) => ({ none: "retirada / circuito normal", stopped: "bomba parada", air: "ar no circuito", clog: "microcanais entupidos" })[f];
+function addEvent(label: string) {
+  events.push({ time: sim.time, label });
+  if (events.length > 100) events.shift();
+}
+function recordSample() {
+  if (sim.diagnosis.state !== lastDiagnosis) {
+    addEvent(sim.diagnosis.label);
+    lastDiagnosis = sim.diagnosis.state;
+  }
+  samples.push({ time: sim.time, q: hyd.q, water: sim.tHot, cold: sim.tCold, cpu: sim.tCpu, gpu: sim.tGpu,
+    pump: sim.pumpEff, fan: sim.fanEff, rpm: sim.rpm, power: sim.power,
+    fault: input.fault, diagnosis: sim.diagnosis.label });
+  if (samples.length > 1800) samples.shift();
+  logRows.unshift(`<tr><td>${F1.format(sim.time)}</td><td class="${hyd.q < 0.5 ? "bad" : ""}">${F2.format(hyd.q)}</td><td>${F1.format(sim.tHot)}</td><td class="${sim.tCpu >= 90 ? "bad" : ""}">${F0.format(sim.tCpu)}</td><td>${F0.format(sim.pumpEff)} %</td></tr>`);
+  if (logRows.length > 6) logRows.pop();
+  $("#logBody").innerHTML = logRows.join("");
+  renderHistory(samples, events);
+}
+function clearHistory() {
+  samples.length = events.length = logRows.length = 0;
+  lastLog = -1;
+  $("#logBody").innerHTML = "";
+  addEvent("Início do registro");
+  recordSample();
+  lastLog = Math.floor(sim.time);
+}
+function resetExperiment() {
+  Object.assign(sim, createSimulation(input));
+  hyd = sim.hyd;
+  lastDiagnosis = sim.diagnosis.state;
+  cycleT = cycleStep = 0;
+  dash = rotorAng = fanAng = bubbleY = 0;
+  clearHistory();
+  updateText();
+}
+function togglePause() {
+  paused = !paused;
+  setText("#pause", paused ? "Retomar" : "Pausar");
+  setText("#presentPause", paused ? "Retomar" : "Pausar");
+  updateText();
+}
+$("#pause").addEventListener("click", togglePause);
+$("#presentPause").addEventListener("click", togglePause);
+$("#reset").addEventListener("click", resetExperiment);
+$("#clearHistory").addEventListener("click", clearHistory);
+$("#runComparison").addEventListener("click", () => runComparison($<HTMLSelectElement>("#comparison").value));
+$("#exportCsv").addEventListener("click", () => {
+  const quote = (v: unknown) => `"${String(v).replace(/"/g, '""')}"`;
+  const rows: unknown[][] = [["tempo_s", "vazao_L_min", "agua_quente_C", "agua_fria_C", "CPU_C", "GPU_C", "PWM_bomba_pct", "PWM_ventoinhas_pct", "RPM", "fator_carga", "falha", "diagnostico", "eventos"]];
+  samples.forEach((s, idx) => rows.push([s.time.toFixed(2), s.q, s.water, s.cold, s.cpu, s.gpu, s.pump, s.fan, s.rpm, s.power, s.fault, s.diagnosis,
+    events.filter(e => e.time <= s.time && e.time > (samples[idx - 1]?.time ?? -1)).map(e => e.label).join(" | ")]));
+  const url = URL.createObjectURL(new Blob(["\uFEFF" + rows.map(r => r.map(quote).join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a"); link.href = url; link.download = "water-cooler-experimento.csv";
+  link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
+// Cada indicador leva à respectiva memória de cálculo por teclado ou mouse.
+["q", "re", "dp", "p", "dt", "cpu"].forEach((id, idx) => {
+  const button = document.createElement("button");
+  button.type = "button"; button.className = "calc-link"; button.textContent = "Ver cálculo";
+  button.setAttribute("aria-controls", `calc-${id}`);
+  const names = ["vazão", "Reynolds", "perda de carga", "potência hidráulica", "ΔT da água", "temperatura da CPU"];
+  button.setAttribute("aria-label", `Ver cálculo de ${names[idx]}`);
+  button.addEventListener("click", () => {
+    const details = $<HTMLDetailsElement>(`#calc-${id}`); details.open = true;
+    renderCalculations(input, sim);
+    details.scrollIntoView({ behavior: reduceMotion.matches ? "auto" : "smooth", block: "center" });
+    details.querySelector("summary")!.focus({ preventScroll: true });
+  });
+  $$(".gauge")[idx].appendChild(button);
+});
+
+// ---------- apresentação guiada ----------
+const presentation = $<HTMLDialogElement>("#presentation");
+let presentationStep = 0;
+const presentationSteps = [
+  ["O circuito em funcionamento", "A água recebe calor nos blocos e o entrega ao ar no radiador. Observe os sensores e o sentido do escoamento.", "Explique: quais grandezas S1, S2, S3 e S4 representam?"],
+  ["O que muda com a bomba a 70 %?", "Mantemos a carga e a ventilação. A redução da rotação desloca o ponto de operação e aumenta o ΔT de equilíbrio.", "Explique: como vazão, Reynolds e perda de carga se relacionam?"],
+  ["A bomba para: diagnóstico desligado", "A vazão e o RPM vão a zero. Observe a evolução da temperatura e a proteção térmica do chip. A previsão da falha é ilustrativa.", "Explique: por que aumentar o comando PWM não resolve uma bomba parada?"],
+  ["A mesma falha com diagnóstico ligado", "Partimos das mesmas temperaturas iniciais. O diagnóstico detecta RPM zero e reduz a carga antes de depender apenas da temperatura do chip.", "Explique: a proteção reduz a carga, mas não elimina a falha. Compare os dois ensaios nos gráficos da seção Controle."],
+];
+function applyPresentationStep() {
+  const wasPaused = paused;
+  pumpIn.value = presentationStep === 1 ? "70" : "100"; fanIn.value = "100";
+  cpuIn.value = "250"; gpuIn.value = "0"; fluidSel.value = "agua";
+  $<HTMLInputElement>("#modeManual").checked = true;
+  diagIn.checked = presentationStep !== 2;
+  setFault(presentationStep >= 2 ? "stopped" : "none");
+  paused = false;
+  if (wasPaused) { setText("#pause", "Pausar"); setText("#presentPause", "Pausar"); }
+  resetExperiment();
+  const [title, description, prompt] = presentationSteps[presentationStep];
+  setText("#presentTitle", title); setText("#presentDescription", description); setText("#presentPrompt", prompt);
+  setText("#presentProgress", `Etapa ${presentationStep + 1} de 4`);
+  $<HTMLButtonElement>("#presentPrev").disabled = presentationStep === 0;
+  $<HTMLButtonElement>("#presentNext").disabled = presentationStep === 3;
+}
+function updatePresentation() {
+  if (!presentation.open) return;
+  const loop = $("#loop").outerHTML.replace(/id="([^"]+)"/g, 'id="present-$1"').replace(/url\(#/g, 'url(#present-').replace('aria-labelledby="loopTitle"', 'aria-labelledby="present-loopTitle"');
+  $("#presentCircuit").innerHTML = loop;
+  setText("#presentQ", `${F2.format(hyd.q)} L/min`);
+  setText("#presentCpu", `${F0.format(sim.tCpu)} °C`);
+  setText("#presentDt", `${F1.format(sim.tHot - sim.tCold)} K`);
+  setText("#presentDiagnosis", sim.diagnosis.label);
+}
+$("#present").addEventListener("click", () => {
+  presentationStep = 0; presentation.showModal();
+  document.body.classList.add("presenting"); applyPresentationStep();
+});
+$("#closePresentation").addEventListener("click", () => presentation.close());
+presentation.addEventListener("close", () => document.body.classList.remove("presenting"));
+$("#presentPrev").addEventListener("click", () => { if (presentationStep > 0) { presentationStep--; applyPresentationStep(); } });
+$("#presentNext").addEventListener("click", () => { if (presentationStep < 3) { presentationStep++; applyPresentationStep(); } });
 
 // ---------- quiz ----------
 const quizList = $("#quizList");
@@ -393,14 +492,15 @@ quizList.addEventListener("toggle", (e) => {
 
 // ---------- laço principal ----------
 readInputs();
+clearHistory();
 let last = performance.now(), textT = 1;
 function frame(now: number) {
-  const dt = Math.min((now - last) / 1000, 0.1);
+  const dt = clamp((now - last) / 1000, 0, 0.1);
   last = now;
-  step(dt);
-  animateLoop(dt);
-  drawReynolds(dt);
-  updateCycle(dt);
+  if (!paused) step(dt);
+  animateLoop(paused ? 0 : dt);
+  drawReynolds(paused ? 0 : dt);
+  if (!paused) updateCycle(dt);
   textT += dt;
   if (textT > 0.1) { textT = 0; updateText(); }
   requestAnimationFrame(frame);

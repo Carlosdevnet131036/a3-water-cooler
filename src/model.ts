@@ -33,7 +33,7 @@ export interface Hydraulics {
   v: number; // m/s na mangueira
   vChannel: number; // m/s nos microcanais
   re: number;
-  regime: "laminar" | "transição" | "turbulento";
+  regime: "sem escoamento" | "laminar" | "transição" | "turbulento";
   f: number;
   dpDist: number;
   dpLocal: number;
@@ -95,7 +95,7 @@ export function solve(n: number, fluid: Fluid, fault: Fault): Hydraulics {
     v: s.v,
     vChannel: s.qSI / GEO.channelArea,
     re: s.re,
-    regime: s.re < 2300 ? "laminar" : s.re < 4000 ? "transição" : "turbulento",
+    regime: q <= 1e-9 ? "sem escoamento" : s.re < 2300 ? "laminar" : s.re < 4000 ? "transição" : "turbulento",
     f: s.f,
     dpDist: s.dpDist,
     dpLocal: s.dpLocal,

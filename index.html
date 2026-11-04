@@ -1,3 +1,6 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Water Cooler em Fluxo</title>
@@ -6,6 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Saira+Condensed:wght@500;600;700&display=swap">
+</head>
+<body>
 
 <header class="topbar">
   <div class="wrap topbar-in">
@@ -29,6 +34,28 @@
       <h1>O caminho da água num water cooler</h1>
       <p class="lede">Mexa na bomba, na carga e nas ventoinhas e veja a vazão, o regime de escoamento, as perdas de carga e as temperaturas mudarem em tempo real. Os números de referência são os do exemplo do relatório.</p>
     </div>
+
+    <div class="experiment-bar" aria-label="Experimento">
+      <div><span class="eyebrow">Bancada virtual</span><p id="experimentStatus" role="status">Em execução · 0 s</p></div>
+      <div class="actions">
+        <button type="button" id="pause">Pausar</button>
+        <button type="button" id="reset">Reiniciar experimento</button>
+        <button type="button" id="present" class="primary">Apresentação guiada</button>
+      </div>
+    </div>
+    <details class="model-notice" id="hypotheses">
+      <summary>Modelo didático · hipóteses, dados e limites</summary>
+      <div class="notice-content">
+        <p><b>Dados hipotéticos, sem medições de um equipamento real.</b> As leituras S1–S4 são simuladas. Água: ρ = 994 kg/m³, μ = 0,72 mPa·s e cₚ = 4.178 J/(kg·K), mantidos constantes na referência de 35 °C, mesmo quando a temperatura calculada muda.</p>
+        <p>Mistura ilustrativa com 30 % de propilenoglicol: ρ = 1.025 kg/m³, μ = 1,60 mPa·s e cₚ = 3.800 J/(kg·K), constantes. A composição e a temperatura reais exigem dados do fabricante.</p>
+        <p>Circuito em série, incompressível, sem vazamento. Mangueira: D = 0,010 m, L = 1,2 m e ΣK = 5. São 40 canais paralelos de 0,5 × 2 mm; o Reynolds exibido se refere à mangueira, não aos canais.</p>
+        <p><b>Blocos + radiador:</b> perda adotada de 1.600 Pa a 1,5 L/min com água. Não é uma medição nem uma ficha técnica. Fora desse ponto, aplica-se Δp = 1.600 · (Q/1,5)² · (μ/μágua)⁰·²⁵; entupimento multiplica esse termo por 5.</p>
+        <p>Bomba hipotética: Δp = 2.781 · n² − (2.781/3²) · Q², com Q em L/min e pressão em Pa. n é a rotação relativa. A equivalência PWM/100 = n é uma aproximação didática; equipamentos reais exigem curva PWM × RPM. As leis de semelhança são estimativas para condições semelhantes.</p>
+        <p>Fator de atrito de Darcy: 64/Re no regime laminar e 0,316/Re⁰·²⁵ no turbulento; entre 2.300 e 4.000 há interpolação ilustrativa, sem precisão garantida. Potência hidráulica Δp·Q não representa o consumo elétrico da bomba.</p>
+        <p>Modelo térmico ilustrativo: ambiente de 25 °C, radiador com condutância 12 + 38·(PWMvent/100)⁰·⁷ W/K e resposta térmica de primeira ordem. Sem circulação, a regularização numérica não representa uma solução física de equilíbrio; o ΔT do balanço de transporte é indisponível.</p>
+        <p>Proteção proposta: alerta para Q &lt; 0,5 L/min ou RPM zero, comando em 100 % e redução simulada da carga para 35 %. Após retirar uma falha, há 40 s de observação térmica. Limiares e tempos são didáticos; o modelo não prevê cavitação, ebulição ou desligamento real.</p>
+      </div>
+    </details>
 
     <div class="bench">
       <figure class="loop-panel" aria-label="Ilustração animada do circuito do water cooler">
@@ -181,6 +208,8 @@
       <div class="gauge"><span class="g-label">ΔT da água</span><span class="g-val" id="gDt">2,4</span><span class="g-unit">K</span></div>
       <div class="gauge"><span class="g-label">CPU</span><span class="g-val" id="gCpu">51</span><span class="g-unit">°C</span><span class="bar"><i id="gCpuBar"></i></span></div>
     </div>
+    <div class="calculation-header"><div><p class="eyebrow">Memória de cálculo</p><h2>De onde vêm os números?</h2></div><p class="small">Abra um indicador para acompanhar os valores atuais, em unidades SI.</p></div>
+    <div class="calculations" id="calculations"></div>
   </section>
 
   <section class="band" id="escoamento">
@@ -294,7 +323,7 @@
           <h3>Sinal PWM</h3>
           <div class="pwm-row"><span>Bomba</span><svg id="pwmPump" viewBox="0 0 300 50" preserveAspectRatio="none" aria-hidden="true"></svg><b id="pwmPumpTxt">100 %</b></div>
           <div class="pwm-row"><span>Ventoinhas</span><svg id="pwmFan" viewBox="0 0 300 50" preserveAspectRatio="none" aria-hidden="true"></svg><b id="pwmFanTxt">100 %</b></div>
-          <p class="small">O duty cycle é a fração do período em nível alto. 70 % de duty dá cerca de 70 % da rotação máxima.</p>
+          <p class="small">O duty cycle é a fração do período em nível alto. Aqui, PWM e rotação são proporcionais por hipótese; a resposta real depende do equipamento.</p>
           <h3>Registro (log)</h3>
           <div class="log-wrap">
             <table class="log">
@@ -303,6 +332,15 @@
             </table>
           </div>
         </div>
+      </div>
+      <div class="history-panel">
+        <div class="calculation-header"><div><p class="eyebrow">Evolução do experimento</p><h3>Temperatura e vazão no tempo</h3></div><div class="actions"><button type="button" id="exportCsv">Exportar CSV</button><button type="button" id="clearHistory">Limpar histórico</button></div></div>
+        <p class="small">Janela dos últimos 120 s. Marcadores indicam falhas, mudanças no diagnóstico e alertas. Registro limitado às últimas 1.800 amostras.</p>
+        <div id="historyCharts" class="history-charts"></div>
+        <ol id="eventList" class="events" aria-label="Eventos recentes"></ol>
+        <div class="compare-controls"><label for="comparison">Comparação com as mesmas condições iniciais</label><select id="comparison"><option value="pump">Bomba a 100 % × 70 %</option><option value="protection">Bomba parada: diagnóstico ligado × desligado</option></select><button type="button" id="runComparison">Comparar 60 segundos</button></div>
+        <p class="small">Ensaios independentes: água, CPU 250 W, GPU 0 W, ventoinhas 100 % e equilíbrio inicial com bomba a 100 %. O ensaio de falha para a bomba em t = 0. Resultado previsto pelo modelo.</p>
+        <div id="comparisonResult" class="comparison-result" role="region" aria-label="Resultado da comparação"></div>
       </div>
     </div>
   </section>
@@ -316,15 +354,15 @@
     <div class="faults-grid">
       <button type="button" class="fault-card" data-fault="stopped">
         <b>Bomba parada</b>
-        <span>O tacômetro marca 0 rpm e a vazão vai a zero. A CPU passa de 90 °C em segundos.</span>
+        <span>O tacômetro marca 0 rpm e a vazão vai a zero. Compare a evolução térmica com e sem diagnóstico.</span>
       </button>
       <button type="button" class="fault-card" data-fault="air">
         <b>Ar no circuito</b>
-        <span>A bomba gira normalmente, mas o rotor bate em bolha e a vazão despenca. Só o sensor de fluxo percebe.</span>
+        <span>A bomba pode girar sem circulação adequada. O sensor de vazão complementa a leitura de RPM.</span>
       </button>
       <button type="button" class="fault-card" data-fault="clog">
         <b>Microcanais entupidos</b>
-        <span>A perda no bloco quintuplica. A vazão cai aos poucos e o ΔT da água sobe com a mesma carga.</span>
+        <span>A resistência dos componentes quintuplica no modelo. A vazão cai e o ΔT aumenta para a mesma carga.</span>
       </button>
       <button type="button" class="fault-card ok" data-fault="none">
         <b>Voltar ao normal</b>
@@ -333,7 +371,7 @@
     </div>
     <div class="proposal">
       <h3>Proposta do grupo</h3>
-      <p>Instalar um sensor de vazão e verificar três condições a cada ciclo: <b>vazão abaixo de 0,5 L/min</b>, <b>bomba com 0 rpm</b> ou <b>ΔT da água subindo com a mesma carga</b>. Ao detectar qualquer uma delas, o sistema leva o PWM a 100 %, avisa o usuário e reduz o clock antes do desligamento por temperatura.</p>
+      <p>Combinar sensor de vazão, tacômetro e temperaturas. <b>Vazão abaixo de 0,5 L/min ou RPM zero</b> ativam a proteção simulada: comando PWM em 100 %, alerta e redução da carga. <b>ΔT acima do esperado</b> gera atenção e deve ser interpretado junto à carga e aos transientes; isoladamente não confirma entupimento. Aumentar o PWM não repara uma bomba parada. Os limiares precisam ser validados em um equipamento real.</p>
     </div>
   </section>
 
@@ -376,4 +414,18 @@
   </section>
 </main>
 
+<dialog id="presentation" aria-labelledby="presentTitle">
+  <div class="presentation-shell">
+    <div class="presentation-top"><span id="presentProgress" class="eyebrow">Etapa 1 de 4</span><button type="button" id="closePresentation">Sair da apresentação</button></div>
+    <h2 id="presentTitle">O circuito em funcionamento</h2>
+    <p id="presentDescription" class="lede"></p>
+    <div class="presentation-content"><div id="presentCircuit" aria-hidden="true"></div><div class="present-readings"><p>Vazão<strong id="presentQ"></strong></p><p>CPU<strong id="presentCpu"></strong></p><p>ΔT da água<strong id="presentDt"></strong></p><p id="presentDiagnosis"></p></div></div>
+    <p id="presentPrompt" class="present-prompt"></p>
+    <p class="small">Experimento didático · cada etapa começa nas mesmas condições térmicas. As leituras são simuladas.</p>
+    <div class="presentation-footer"><button type="button" id="presentPrev">Etapa anterior</button><button type="button" id="presentPause">Pausar</button><button type="button" id="presentNext" class="primary">Próxima etapa</button></div>
+  </div>
+</dialog>
+
 <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

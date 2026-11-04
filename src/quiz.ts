@@ -17,7 +17,7 @@ export const QUIZ: QA[] = [
   },
   {
     q: "O escoamento no exemplo é laminar ou turbulento? Como vocês sabem?",
-    a: "Turbulento, mas perto da transição. Re = ρVD/μ = 994 × 0,318 × 0,010 / 0,72×10⁻³ ≈ 4.394, acima de 4.000. Com a bomba a 70 % o Re cai para cerca de 3.076, que já é transição.",
+    a: "Na mangueira, turbulento e perto da transição. Re = ρVD/μ = 994 × 0,318 × 0,010 / (0,72×10⁻³) ≈ 4.394. Nos microcanais, é necessário calcular outro Reynolds com o diâmetro hidráulico de cada canal. Experimente a bomba a 70 % e consulte a memória de cálculo para o valor atualizado.",
     topic: "Reynolds",
   },
   {
@@ -32,17 +32,17 @@ export const QUIZ: QA[] = [
   },
   {
     q: "Como o PWM controla a velocidade da bomba?",
-    a: "O controlador liga e desliga o sinal 25 mil vezes por segundo. O duty cycle, a fração do tempo em nível alto, define a rotação: 70 % de duty dá cerca de 70 % da rotação máxima. A rotação é confirmada pelo tacômetro, que gera 2 pulsos por volta.",
+    a: "Neste exemplo, o controlador envia um sinal PWM de 25 kHz. O duty cycle é a fração do período em nível alto. O modelo aproxima rotação relativa por PWM/100, mas a relação real e o número de pulsos do tacômetro dependem da ficha técnica do equipamento. A leitura de RPM verifica a rotação efetiva; o comando sozinho não a garante.",
     topic: "Integração com a Computação",
   },
   {
     q: "Se a bomba for de 100 % para 70 %, o que acontece com a vazão, a perda e a potência?",
-    a: "Pelas leis de semelhança: a vazão cai na mesma proporção (×0,7 → 1,05 L/min), a pressão com o quadrado (×0,49 → ≈1.022 Pa) e a potência com o cubo (×0,343 → 0,018 W). O ΔT da água sobe só de 2,4 para 3,4 K.",
+    a: "Para 70 % da rotação, as leis de semelhança estimam Q × 0,7, pressão × 0,49 e potência hidráulica × 0,343 em condições semelhantes: cerca de 1,05 L/min e 0,018 W. Na bancada, o ponto exato é recalculado pela interseção das curvas e o fator de atrito muda com Reynolds; por isso o resultado pode diferir dessas proporções. Consulte os valores atuais e compare os ensaios na seção Controle.",
     topic: "Exemplo numérico",
   },
   {
     q: "Por que o RPM da bomba não é suficiente para detectar uma falha?",
-    a: "Porque a bomba pode girar normalmente sem mover água: com ar no rotor ou com os microcanais entupidos, o tacômetro mostra rotação normal e a vazão é quase nula. Por isso o grupo propõe um sensor de vazão e o acompanhamento do ΔT da água.",
+    a: "Porque a bomba pode girar sem produzir circulação adequada. Ar e obstruções podem reduzir a vazão mesmo com RPM normal; isso não significa que toda obstrução zere o fluxo. O sensor de vazão complementa o tacômetro, e o ΔT deve ser interpretado junto à carga e ao estado térmico.",
     topic: "Falha e melhoria",
   },
 ];
