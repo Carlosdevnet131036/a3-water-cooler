@@ -92,11 +92,11 @@ const blank = (n = 1) => Array.from({ length: n }, () => new Paragraph({ childre
 
 // ---------- capa ----------
 const integrantes = [
-  "Alexandre Pinho do Rosario Filho",
-  "Carlos Henrique Pereira da Silva",
-  "Daniela Brito da Silva",
-  "Raffael Morais Dutra",
-  "Victor Hugo Paiva dos Santos",
+  ["Alexandre Pinho do Rosario Filho", "12825211259"],
+  ["Carlos Henrique Pereira da Silva", "12823112833"],
+  ["Daniela Brito da Silva", "12822118118"],
+  ["Raffael Morais Dutra", "12825133242"],
+  ["Victor Hugo Paiva dos Santos", "12823129297"],
 ];
 const capa = [
   C("UNIVERSIDADE POTIGUAR – UNP", { bold: true }),
@@ -107,7 +107,7 @@ const capa = [
   C("WATER COOLER PARA PROCESSADORES E PLACAS DE VÍDEO", { bold: true, size: 28 }),
   C("Escoamento em circuito fechado, perdas de carga e controle por PWM", { after: 0 }),
   ...blank(5),
-  ...integrantes.map((n) => C(`${n} – Matrícula: __________`)),
+  ...integrantes.map(([n, ra]) => C(`${n} – Matrícula: ${ra}`)),
   ...blank(5),
   C("Natal/RN"),
   C("Novembro de 2026"),
