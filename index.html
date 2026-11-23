@@ -17,6 +17,7 @@
     <a class="brand" href="#bancada">A3 · Grupo 3</a>
     <nav aria-label="Seções">
       <a href="#bancada">Bancada</a>
+      <a href="#modelo3d">3D</a>
       <a href="#escoamento">Escoamento</a>
       <a href="#curvas">Curvas</a>
       <a href="#controle">Controle</a>
@@ -210,6 +211,31 @@
     </div>
     <div class="calculation-header"><div><p class="eyebrow">Memória de cálculo</p><h2>De onde vêm os números?</h2></div><p class="small">Abra um indicador para acompanhar os valores atuais, em unidades SI.</p></div>
     <div class="calculations" id="calculations"></div>
+  </section>
+
+  <section class="wrap section" id="modelo3d">
+    <header class="sec-head">
+      <p class="eyebrow">Modelo 3D</p>
+      <h2>O water cooler montado na bancada</h2>
+      <p>Gire, aproxime e clique nas peças. A água corre na velocidade calculada pelo simulador e muda de cor conforme esquenta. Use a vista explodida para separar os componentes.</p>
+    </header>
+    <div class="stage3d">
+      <div class="canvas3d" id="scene3d"></div>
+      <div class="toolbar3d" role="group" aria-label="Controles do modelo 3D">
+        <button type="button" data-3d="rotate" aria-pressed="true">Girar sozinho</button>
+        <button type="button" data-3d="explode" aria-pressed="false">Vista explodida</button>
+        <button type="button" data-3d="labels" aria-pressed="true">Rótulos</button>
+        <button type="button" data-3d="reset">Recentralizar</button>
+        <button type="button" data-3d="full">Tela cheia</button>
+      </div>
+      <div class="info3d" aria-live="polite"></div>
+      <div class="mini3d">
+        <label for="p3Pump">Bomba <output id="p3PumpOut">100 %</output></label>
+        <input type="range" id="p3Pump" min="0" max="100" step="1" value="100">
+        <label for="p3Cpu">Carga da CPU <output id="p3CpuOut">250 W</output></label>
+        <input type="range" id="p3Cpu" min="0" max="300" step="5" value="250">
+      </div>
+    </div>
   </section>
 
   <section class="band" id="escoamento">

@@ -6,6 +6,7 @@ import { referenceInputs, createSimulation, advanceSimulation } from "./simulati
 import { renderCalculations } from "./calculations";
 import { renderHistory, runComparison } from "./history";
 import type { Sample, SimEvent } from "./history";
+import { initScene3d } from "./scene3d";
 
 // ---------- utilidades ----------
 const $ = <T extends Element = HTMLElement>(sel: string) => document.querySelector(sel) as T;
@@ -33,6 +34,12 @@ const diagIn = $<HTMLInputElement>("#diag");
 
 for (const f of FLUIDS) fluidSel.add(new Option(f.name, f.id));
 
+// controles compactos da seção 3D espelham os da bancada
+const p3Pump = $<HTMLInputElement>("#p3Pump");
+const p3Cpu = $<HTMLInputElement>("#p3Cpu");
+p3Pump.addEventListener("input", () => { pumpIn.value = p3Pump.value; readInputs(); });
+p3Cpu.addEventListener("input", () => { cpuIn.value = p3Cpu.value; readInputs(); });
+
 function readInputs() {
   const previousFault = input.fault;
   const previousDiag = input.diag;
@@ -53,6 +60,9 @@ function readInputs() {
   hyd = sim.hyd;
   setText("#cpuOut", `${input.cpu} W`);
   setText("#gpuOut", `${input.gpu} W`);
+  p3Pump.disabled = input.mode === "auto";
+  if (document.activeElement !== p3Cpu) p3Cpu.value = cpuIn.value;
+  setText("#p3CpuOut", `${input.cpu} W`);
   $$<HTMLButtonElement>(".fault-card").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.fault === input.fault)));
   updateText();
   if (previousFault !== input.fault || previousDiag !== input.diag) recordSample();
@@ -265,6 +275,8 @@ let lastLog = -1, cycleStep = 0, cycleT = 0;
 function updateText() {
   const fl = input.fluid;
   setText("#pumpOut", `${Math.round(sim.pumpEff)} %`);
+  setText("#p3PumpOut", `${Math.round(sim.pumpEff)} %`);
+  if (document.activeElement !== p3Pump) p3Pump.value = String(Math.round(sim.pumpEff));
   setText("#fanOut", `${Math.round(sim.fanEff)} %`);
   setText("#gQ", F2.format(hyd.q));
   setText("#gRe", F0.format(hyd.re));
@@ -507,6 +519,11 @@ function frame(now: number) {
 }
 updateText();
 requestAnimationFrame(frame);
+
+initScene3d($("#scene3d"), () => ({
+  hyd, tCold: sim.tCold, tMid: sim.tMid, tHot: sim.tHot, tCpu: sim.tCpu, tGpu: sim.tGpu,
+  rpm: sim.rpm, pump: sim.pumpEff, fan: sim.fanEff, fault: input.fault,
+}));
 
 // referência rápida no console para conferir com o relatório
 (window as unknown as { a3: unknown }).a3 = { GEO, solve, FLUIDS };
