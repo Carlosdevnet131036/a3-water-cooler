@@ -5,6 +5,7 @@ Trabalho A3 de **Sistemas Fluidomecânicos** (Universidade Potiguar, Prof. Dr. R
 O site é um simulador interativo do circuito de refrigeração líquida, feito em TypeScript:
 
 - **Bancada:** circuito animado com bomba, blocos da CPU e da GPU, radiador e sensores. Dá para controlar o PWM da bomba e das ventoinhas, a carga e o fluido.
+- **Dois modos:** **Apresentação** (`#apresentacao`), com 14 telas 16:9 no roteiro dos cinco integrantes, cronômetro de 15 min, notas do apresentador (N), tela cheia (F) e navegação por setas ou passador de slides; e **Estudo** (`#estudo`), a página completa descrita abaixo. As telas usam os componentes vivos da página (3D, circuito, gráficos, medidores) e os devolvem ao sair.
 - **Modelo 3D (Three.js):** o circuito montado em bancada, para girar, aproximar e clicar nas peças, com vista explodida e tela cheia. A água corre na velocidade do simulador e muda de cor com a temperatura.
 - **Escoamento:** número de Reynolds com visualização laminar/turbulento, continuidade e perdas de carga, com os valores da bancada.
 - **Curvas:** curva da bomba × curva do sistema, ponto de operação e leis de semelhança.
@@ -48,6 +49,7 @@ O CSV usa separador `;`, codificação UTF-8 e ponto decimal. Inclui tempo, vaz�
 | `src/calculations.ts` | Memória de cálculo dos seis indicadores |
 | `src/history.ts` | Gráficos, eventos e comparação de cenários |
 | `src/scene3d.ts` | Modelo 3D do water cooler (Three.js) |
+| `src/presentation.ts` | Modo apresentação: telas, notas, cronômetro e cenários |
 | `src/quiz.ts` | Perguntas e respostas |
 | `src/style.css` | Estilos (tema claro e escuro) |
 | `docs/` | Relatório (DOCX/PDF) e slides (PPTX/PDF) |

@@ -7,6 +7,8 @@ import { renderCalculations } from "./calculations";
 import { renderHistory, runComparison } from "./history";
 import type { Sample, SimEvent } from "./history";
 import { initScene3d } from "./scene3d";
+import { initPresentation } from "./presentation";
+import type { Scenario } from "./presentation";
 
 // ---------- utilidades ----------
 const $ = <T extends Element = HTMLElement>(sel: string) => document.querySelector(sel) as T;
@@ -354,7 +356,6 @@ function updateText() {
   setText("#pwmPumpTxt", `${F0.format(sim.pumpEff)} %`);
   setText("#pwmFanTxt", `${F0.format(sim.fanEff)} %`);
   renderCalculations(input, sim);
-  updatePresentation();
 }
 
 function updateCycle(dt: number) {
@@ -414,11 +415,9 @@ function resetExperiment() {
 function togglePause() {
   paused = !paused;
   setText("#pause", paused ? "Retomar" : "Pausar");
-  setText("#presentPause", paused ? "Retomar" : "Pausar");
   updateText();
 }
 $("#pause").addEventListener("click", togglePause);
-$("#presentPause").addEventListener("click", togglePause);
 $("#reset").addEventListener("click", resetExperiment);
 $("#clearHistory").addEventListener("click", clearHistory);
 $("#runComparison").addEventListener("click", () => runComparison($<HTMLSelectElement>("#comparison").value));
@@ -448,48 +447,18 @@ $("#exportCsv").addEventListener("click", () => {
   $$(".gauge")[idx].appendChild(button);
 });
 
-// ---------- apresentação guiada ----------
-const presentation = $<HTMLDialogElement>("#presentation");
-let presentationStep = 0;
-const presentationSteps = [
-  ["O circuito em funcionamento", "A água recebe calor nos blocos e o entrega ao ar no radiador. Observe os sensores e o sentido do escoamento.", "Explique: quais grandezas S1, S2, S3 e S4 representam?"],
-  ["O que muda com a bomba a 70 %?", "Mantemos a carga e a ventilação. A redução da rotação desloca o ponto de operação e aumenta o ΔT de equilíbrio.", "Explique: como vazão, Reynolds e perda de carga se relacionam?"],
-  ["A bomba para: diagnóstico desligado", "A vazão e o RPM vão a zero. Observe a evolução da temperatura e a proteção térmica do chip. A previsão da falha é ilustrativa.", "Explique: por que aumentar o comando PWM não resolve uma bomba parada?"],
-  ["A mesma falha com diagnóstico ligado", "Partimos das mesmas temperaturas iniciais. O diagnóstico detecta RPM zero e reduz a carga antes de depender apenas da temperatura do chip.", "Explique: a proteção reduz a carga, mas não elimina a falha. Compare os dois ensaios nos gráficos da seção Controle."],
-];
-function applyPresentationStep() {
-  const wasPaused = paused;
-  pumpIn.value = presentationStep === 1 ? "70" : "100"; fanIn.value = "100";
+// ---------- cenários usados pelo modo apresentação ----------
+// Cada cenário parte das mesmas condições térmicas: água, CPU 250 W, GPU 0 W, ventoinhas 100 %.
+function applyScenario(name: Scenario) {
+  pumpIn.value = name === "pwm70" ? "70" : "100"; fanIn.value = "100";
   cpuIn.value = "250"; gpuIn.value = "0"; fluidSel.value = "agua";
   $<HTMLInputElement>("#modeManual").checked = true;
-  diagIn.checked = presentationStep !== 2;
-  setFault(presentationStep >= 2 ? "stopped" : "none");
-  paused = false;
-  if (wasPaused) { setText("#pause", "Pausar"); setText("#presentPause", "Pausar"); }
+  diagIn.checked = name !== "stoppedNoDiag";
+  setFault(name === "stoppedNoDiag" || name === "stoppedDiag" ? "stopped" : "none");
+  if (paused) togglePause();
   resetExperiment();
-  const [title, description, prompt] = presentationSteps[presentationStep];
-  setText("#presentTitle", title); setText("#presentDescription", description); setText("#presentPrompt", prompt);
-  setText("#presentProgress", `Etapa ${presentationStep + 1} de 4`);
-  $<HTMLButtonElement>("#presentPrev").disabled = presentationStep === 0;
-  $<HTMLButtonElement>("#presentNext").disabled = presentationStep === 3;
 }
-function updatePresentation() {
-  if (!presentation.open) return;
-  const loop = $("#loop").outerHTML.replace(/id="([^"]+)"/g, 'id="present-$1"').replace(/url\(#/g, 'url(#present-').replace('aria-labelledby="loopTitle"', 'aria-labelledby="present-loopTitle"');
-  $("#presentCircuit").innerHTML = loop;
-  setText("#presentQ", `${F2.format(hyd.q)} L/min`);
-  setText("#presentCpu", `${F0.format(sim.tCpu)} °C`);
-  setText("#presentDt", `${F1.format(sim.tHot - sim.tCold)} K`);
-  setText("#presentDiagnosis", sim.diagnosis.label);
-}
-$("#present").addEventListener("click", () => {
-  presentationStep = 0; presentation.showModal();
-  document.body.classList.add("presenting"); applyPresentationStep();
-});
-$("#closePresentation").addEventListener("click", () => presentation.close());
-presentation.addEventListener("close", () => document.body.classList.remove("presenting"));
-$("#presentPrev").addEventListener("click", () => { if (presentationStep > 0) { presentationStep--; applyPresentationStep(); } });
-$("#presentNext").addEventListener("click", () => { if (presentationStep < 3) { presentationStep++; applyPresentationStep(); } });
+initPresentation({ applyScenario });
 
 // ---------- quiz ----------
 const quizList = $("#quizList");

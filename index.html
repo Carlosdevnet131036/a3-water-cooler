@@ -15,7 +15,11 @@
 <header class="topbar">
   <div class="wrap topbar-in">
     <a class="brand" href="#bancada">A3 · Grupo 3</a>
-    <nav aria-label="Seções">
+    <div class="mode-switch" role="group" aria-label="Modo do site">
+      <a href="#apresentacao" class="mode-tab" data-mode="present">Apresentação</a>
+      <a href="#estudo" class="mode-tab" data-mode="study" aria-current="page">Estudo</a>
+    </div>
+    <nav aria-label="Seções do estudo">
       <a href="#bancada">Bancada</a>
       <a href="#modelo3d">3D</a>
       <a href="#escoamento">Escoamento</a>
@@ -41,7 +45,7 @@
       <div class="actions">
         <button type="button" id="pause">Pausar</button>
         <button type="button" id="reset">Reiniciar experimento</button>
-        <button type="button" id="present" class="primary">Apresentação guiada</button>
+        <a href="#apresentacao" id="present" class="button primary">Abrir modo apresentação</a>
       </div>
     </div>
     <details class="model-notice" id="hypotheses">
@@ -440,17 +444,24 @@
   </section>
 </main>
 
-<dialog id="presentation" aria-labelledby="presentTitle">
-  <div class="presentation-shell">
-    <div class="presentation-top"><span id="presentProgress" class="eyebrow">Etapa 1 de 4</span><button type="button" id="closePresentation">Sair da apresentação</button></div>
-    <h2 id="presentTitle">O circuito em funcionamento</h2>
-    <p id="presentDescription" class="lede"></p>
-    <div class="presentation-content"><div id="presentCircuit" aria-hidden="true"></div><div class="present-readings"><p>Vazão<strong id="presentQ"></strong></p><p>CPU<strong id="presentCpu"></strong></p><p>ΔT da água<strong id="presentDt"></strong></p><p id="presentDiagnosis"></p></div></div>
-    <p id="presentPrompt" class="present-prompt"></p>
-    <p class="small">Experimento didático · cada etapa começa nas mesmas condições térmicas. As leituras são simuladas.</p>
-    <div class="presentation-footer"><button type="button" id="presentPrev">Etapa anterior</button><button type="button" id="presentPause">Pausar</button><button type="button" id="presentNext" class="primary">Próxima etapa</button></div>
+<div id="deck" class="deck" role="region" aria-label="Modo apresentação" aria-roledescription="apresentação" hidden>
+  <div class="deck-top">
+    <span class="deck-brand">A3 · Grupo 3</span>
+    <span class="deck-spacer"></span>
+    <button type="button" id="deckTimer" class="deck-timer" title="Clique para zerar o cronômetro">00:00 / 15:00</button>
+    <button type="button" id="deckNotes" aria-pressed="false">Notas (N)</button>
+    <button type="button" id="deckFull">Tela cheia (F)</button>
+    <a href="#estudo" class="button">Sair para o estudo</a>
   </div>
-</dialog>
+  <div class="deck-stage" id="deckStage"></div>
+  <aside class="deck-notes" id="deckNotesPanel" hidden></aside>
+  <div class="deck-bottom">
+    <button type="button" id="deckPrev" aria-label="Tela anterior">←</button>
+    <div class="deck-dots" id="deckDots" role="tablist" aria-label="Telas"></div>
+    <span class="deck-count" id="deckCount">1 / 14</span>
+    <button type="button" id="deckNext" class="primary" aria-label="Próxima tela">→</button>
+  </div>
+</div>
 
 <script type="module" src="/src/main.ts"></script>
 </body>
