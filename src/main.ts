@@ -458,7 +458,6 @@ function applyScenario(name: Scenario) {
   if (paused) togglePause();
   resetExperiment();
 }
-initPresentation({ applyScenario });
 
 // ---------- quiz ----------
 const quizList = $("#quizList");
@@ -489,10 +488,13 @@ function frame(now: number) {
 updateText();
 requestAnimationFrame(frame);
 
-initScene3d($("#scene3d"), () => ({
+const scene3d = initScene3d($("#scene3d"), () => ({
   hyd, tCold: sim.tCold, tMid: sim.tMid, tHot: sim.tHot, tCpu: sim.tCpu, tGpu: sim.tGpu,
   rpm: sim.rpm, pump: sim.pumpEff, fan: sim.fanEff, fault: input.fault,
+  cpuW: input.cpu * sim.power, gpuW: input.gpu * sim.power,
+  radW: hyd.qSI * input.fluid.rho * input.fluid.cp * Math.max(0, sim.tHot - sim.tCold),
 }));
+initPresentation({ applyScenario, scene3d });
 
 // referência rápida no console para conferir com o relatório
 (window as unknown as { a3: unknown }).a3 = { GEO, solve, FLUIDS };

@@ -3,10 +3,13 @@
 // (movem o elemento vivo para a tela e devolvem ao sair), então o 3D, o circuito,
 // os medidores e os gráficos continuam ligados ao mesmo simulador.
 
+import type { Scene3dApi, View3d } from "./scene3d";
+
 export type Scenario = "ref" | "pwm70" | "stoppedNoDiag" | "stoppedDiag";
 
 interface Api {
   applyScenario(name: Scenario): void;
+  scene3d: Scene3dApi;
 }
 
 type Speaker = "Alexandre" | "Carlos" | "Daniela" | "Raffael" | "Victor" | "Todos";
@@ -17,6 +20,7 @@ interface Slide {
   html: string;
   notes: string;
   scenario?: Scenario; // aplicado ao entrar na tela
+  view3d?: { view: View3d; cut?: boolean; pressure?: boolean; heat?: boolean; showcase?: boolean };
 }
 
 // Componentes da página que podem ser emprestados pelas telas.
@@ -29,6 +33,7 @@ const MOUNTS: Record<string, string[]> = {
   losses: ["#stack", ".stack-legend"],
   cycle: ["#cycle"],
   pwm: [".pwm-row"],
+  alert: ["#alert"],
 };
 
 const mount = (name: string) => `<div class="mount mount-${name}" data-mount="${name}"></div>`;
@@ -51,7 +56,9 @@ const SLIDES: Slide[] = [
   {
     speaker: "Alexandre",
     title: "Capa",
+    view3d: { view: "home", showcase: true },
     html: `<div class="slide slide-cover">
+      <div class="cover-3d">${mount("model3d")}</div>
       <p class="s-eyebrow">A3 · Sistemas Fluidomecânicos · Grupo 3</p>
       <h1 class="s-hero">Water cooler para processadores e placas de vídeo</h1>
       <p class="s-lede">Escoamento em circuito fechado, perdas de carga e controle por PWM</p>
@@ -61,7 +68,7 @@ const SLIDES: Slide[] = [
       </ul>
       <p class="s-foot">Prof. Dr. Ronyclei Raimundo da Silva · Universidade Potiguar · 2026</p>
     </div>`,
-    notes: "Apresentar o grupo, o tema 01 e o roteiro: problema, conceitos de fluidos, sistema, integração com a Computação, exemplo numérico, falha e melhoria, conclusão.",
+    notes: "Atalhos: → e ← trocam de tela; segure Z para ampliar onde está o mouse; N mostra estas notas; F põe em tela cheia; 0 a 5 levam a câmera do 3D às peças. Apresentar o grupo, o tema 01 e o roteiro: problema, conceitos de fluidos, sistema, integração com a Computação, exemplo numérico, falha e melhoria, conclusão.",
   },
   {
     speaker: "Alexandre",
@@ -86,16 +93,18 @@ const SLIDES: Slide[] = [
     html: `<div class="slide">
       <h2 class="s-title">Como funciona o circuito fechado</h2>
       <div class="s-body s-media">${mount("model3d")}
-        <ol class="s-steps">
-          <li><b>Bomba</b> empurra a água</li>
-          <li><b>Bloco da CPU</b> com microcanais recebe o calor</li>
-          <li><b>Bloco da GPU</b> recebe mais calor</li>
-          <li><b>Radiador</b> e ventoinhas jogam o calor no ar</li>
-          <li><b>Reservatório</b> devolve a água à bomba</li>
+        <ol class="s-steps s-steps-3d">
+          <li><button type="button" data-view="pump"><b>Bomba</b> empurra a água</button></li>
+          <li><button type="button" data-view="cpu"><b>Bloco da CPU</b> com microcanais recebe o calor</button></li>
+          <li><button type="button" data-view="gpu"><b>Bloco da GPU</b> recebe mais calor</button></li>
+          <li><button type="button" data-view="rad"><b>Radiador</b> e ventoinhas jogam o calor no ar</button></li>
+          <li><button type="button" data-view="res"><b>Reservatório</b> devolve a água à bomba</button></li>
+          <li class="s-step-all"><button type="button" data-view="home">Ver o circuito inteiro</button></li>
         </ol>
       </div>
     </div>`,
-    notes: "Girar o modelo, clicar nas peças e usar a Vista explodida para mostrar cada componente. A água muda de cor conforme esquenta. Pergunta possível: quais grandezas S1, S2, S3 e S4 medem?",
+    view3d: { view: "home" },
+    notes: "Clicar em cada passo (ou teclas 1 a 5) para a câmera ir até a peça; 0 volta ao circuito inteiro. Ligar 'Calor' para mostrar as setas de watts. Girar o modelo, clicar nas peças e usar a Vista explodida para mostrar cada componente. A água muda de cor conforme esquenta. Pergunta possível: quais grandezas S1, S2, S3 e S4 medem?",
   },
   {
     speaker: "Carlos",
@@ -127,6 +136,26 @@ const SLIDES: Slide[] = [
       </div>
     </div>`,
     notes: "Em circuito fechado a vazão mássica é a mesma em todos os pontos; nos microcanais a área é menor e a água acelera. No exemplo, Re ≈ 4.394: turbulento, mas perto da transição. As partículas mostram o escoamento na velocidade real.",
+  },
+  {
+    speaker: "Carlos",
+    title: "Por dentro",
+    scenario: "ref",
+    view3d: { view: "cut", cut: true },
+    html: `<div class="slide">
+      <h2 class="s-title">Por dentro do bloco e da mangueira</h2>
+      <div class="s-body s-media">${mount("model3d")}
+        <div class="s-side">
+          <div class="s-eqs s-eqs-col">
+            <div><span>Laminar · Re &lt; 2.300</span><b>perfil parabólico</b></div>
+            <div><span>Turbulento · Re &gt; 4.000</span><b>perfil achatado</b></div>
+            <div><span>Microcanais</span><b>A menor → V maior</b></div>
+          </div>
+          <p class="s-text">As setas mostram a velocidade em cada ponto do diâmetro. Na parede a água fica parada (condição de não escorregamento).</p>
+        </div>
+      </div>
+    </div>`,
+    notes: "No corte, a tampa do bloco some e aparece a água entre as aletas, mais rápida que na mangueira (continuidade). O perfil acima da mangueira muda ao vivo: com bomba a 100 % (Re ≈ 4.394) é achatado; reduzindo a bomba no modo Estudo, Re cai e o perfil vira parábola. O botão Pressão colore as mangueiras pela pressão: a maior queda é no bloco.",
   },
   {
     speaker: "Daniela",
@@ -234,18 +263,20 @@ const SLIDES: Slide[] = [
     speaker: "Victor",
     title: "Falha e melhoria",
     scenario: "ref",
-    html: `<div class="slide">
+    html: `<div class="slide slide-fault">
       <h2 class="s-title">Quando a bomba para</h2>
       <div class="s-body s-media">
-        ${mount("loop")}
+        ${mount("model3d")}
         <div class="s-side">
           ${scenarioButtons([["stoppedNoDiag", "Parar · sem diagnóstico"], ["stoppedDiag", "Parar · com diagnóstico"], ["ref", "Voltar ao normal"]])}
+          ${mount("alert")}
           ${mount("gauges")}
           <p class="s-text"><b>Proposta:</b> sensor de vazão + tacômetro + temperaturas. Vazão &lt; 0,5 L/min ou RPM = 0 → alerta, PWM 100 % e redução de carga.</p>
         </div>
       </div>
     </div>`,
-    notes: "Primeiro 'sem diagnóstico': a vazão e o RPM vão a zero e só a proteção térmica do chip atua. Depois 'com diagnóstico': mesmas temperaturas iniciais, o alerta aparece antes. Pergunta possível: por que aumentar o PWM não resolve uma bomba parada? A proteção reduz a carga, mas não elimina a falha.",
+    view3d: { view: "fault" },
+    notes: "No 3D: as partículas param, a bomba deixa de girar, o bloco da CPU começa a brilhar em vermelho e aparece o aviso sobre a bomba. Primeiro 'sem diagnóstico': a vazão e o RPM vão a zero e só a proteção térmica do chip atua. Depois 'com diagnóstico': mesmas temperaturas iniciais, o alerta aparece antes. Pergunta possível: por que aumentar o PWM não resolve uma bomba parada? A proteção reduz a carga, mas não elimina a falha.",
   },
   {
     speaker: "Victor",
@@ -336,6 +367,20 @@ export function initPresentation(api: Api) {
       }),
     );
     if (s.scenario) api.applyScenario(s.scenario);
+    if (stage.querySelector('[data-mount="model3d"]')) {
+      const v = s.view3d ?? { view: "home" as View3d };
+      api.scene3d.showcase(!!v.showcase);
+      api.scene3d.setCut(!!v.cut);
+      api.scene3d.setPressure(!!v.pressure);
+      api.scene3d.setHeat(!!v.heat);
+      if (!v.showcase) api.scene3d.focus(v.view);
+    } else api.scene3d.showcase(false);
+    stage.querySelectorAll<HTMLButtonElement>("[data-view]").forEach((b) =>
+      b.addEventListener("click", () => {
+        api.scene3d.focus(b.dataset.view as View3d);
+        stage.querySelectorAll("[data-view]").forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+      }),
+    );
     const first = stage.querySelector(`[data-scenario="${s.scenario ?? ""}"]`);
     first?.setAttribute("aria-pressed", "true");
     notesPanel.textContent = s.notes;
@@ -378,7 +423,7 @@ export function initPresentation(api: Api) {
 
   document.addEventListener("keydown", (e) => {
     if (!open || e.altKey || e.ctrlKey || e.metaKey) return;
-    const t = e.target as HTMLElement;
+    const t = (e.target instanceof Element ? e.target : document.body) as HTMLElement;
     if (t.closest("input, select, textarea")) return;
     const k = e.key;
     if (k === "ArrowRight" || k === "PageDown" || (k === " " && !t.closest("button"))) { e.preventDefault(); go(index + 1); }
@@ -388,6 +433,53 @@ export function initPresentation(api: Api) {
     else if (k === "n" || k === "N") setNotes(notesPanel.hidden);
     else if (k === "f" || k === "F") toggleFull();
   });
+
+  // ---------- lupa: segurar Z amplia a tela em torno do mouse ----------
+  const ZOOM = 1.8;
+  let zTarget = 1, zScale = 1, zRun = false;
+  let fx = 0.5, fy = 0.5, ox = 0.5, oy = 0.5, zLast = 0;
+  const smooth = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  stage.addEventListener("pointermove", (e) => {
+    const f = stage.querySelector<HTMLElement>(".slide-frame");
+    if (!f) return;
+    // posição relativa ao quadro sem a ampliação (offset* ignora o transform)
+    const r = stage.getBoundingClientRect();
+    const left = r.left + f.offsetLeft, top = r.top + f.offsetTop;
+    fx = Math.min(1, Math.max(0, (e.clientX - left) / f.offsetWidth));
+    fy = Math.min(1, Math.max(0, (e.clientY - top) / f.offsetHeight));
+  });
+  function zoomTick(now: number) {
+    const f = stage.querySelector<HTMLElement>(".slide-frame");
+    const dt = Math.min(0.05, (now - zLast) / 1000);
+    zLast = now;
+    zScale += (zTarget - zScale) * (smooth ? Math.min(1, dt * 9) : 1);
+    ox += (fx - ox) * (smooth ? Math.min(1, dt * 7) : 1);
+    oy += (fy - oy) * (smooth ? Math.min(1, dt * 7) : 1);
+    if (f) {
+      f.style.transformOrigin = `${(ox * 100).toFixed(2)}% ${(oy * 100).toFixed(2)}%`;
+      f.style.transform = `scale(${zScale.toFixed(4)})`;
+    }
+    if (zTarget === 1 && Math.abs(zScale - 1) < 0.002) {
+      zScale = 1; zRun = false;
+      if (f) { f.style.transform = ""; f.style.transformOrigin = ""; }
+      deck.classList.remove("zooming");
+      return;
+    }
+    requestAnimationFrame(zoomTick);
+  }
+  function setZoom(on: boolean) {
+    if (!on && zTarget === 1 && !zRun) return;
+    zTarget = on ? ZOOM : 1;
+    if (on) { ox = fx; oy = fy; deck.classList.add("zooming"); }
+    if (!zRun) { zRun = true; zLast = performance.now(); requestAnimationFrame(zoomTick); }
+  }
+  document.addEventListener("keydown", (e) => {
+    if (!open || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    if ((e.target as Element | null)?.closest?.("input, select, textarea")) return;
+    if (e.key === "z" || e.key === "Z") setZoom(true);
+  });
+  document.addEventListener("keyup", (e) => { if (e.key === "z" || e.key === "Z") setZoom(false); });
+  window.addEventListener("blur", () => setZoom(false));
 
   // ---------- troca de modo pelo endereço (#apresentacao / #estudo) ----------
   function route() {
@@ -403,6 +495,8 @@ export function initPresentation(api: Api) {
       render();
       ($("#deckNext") as HTMLButtonElement).focus({ preventScroll: true });
     } else {
+      api.scene3d.showcase(false);
+      setZoom(false);
       returnAll();
       stage.innerHTML = "";
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});

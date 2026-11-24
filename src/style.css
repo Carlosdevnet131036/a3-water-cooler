@@ -203,6 +203,24 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--cold); width: 
   border-radius: var(--radius); border: 1px solid var(--line);
   background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(6px);
 }
+.tag3d.alert { color: #fff; background: var(--hot); border-color: var(--hot); font-weight: 600; }
+.tag3d.heat { color: #fff; background: #e8632a; border-color: #e8632a; }
+.tag3d.profile { color: var(--cold); border-color: var(--cold); }
+.labels3d:not(.cut) .tag3d.cutonly { display: none; }
+.labels3d.cut .tag3d:not(.cutonly):not(.profile):not(.alert) { display: none; } /* no corte, só os rótulos do corte */
+.legend3d {
+  position: absolute; right: 12px; top: 58px; z-index: 2; display: grid; grid-template-columns: auto auto; gap: 2px 12px;
+  padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-family: var(--font-mono); font-size: 0.72rem;
+  background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(6px); pointer-events: none;
+}
+.legend3d b { grid-column: 1 / -1; font-family: var(--font-body, inherit); font-size: 0.78rem; }
+.legend3d i { grid-column: 1 / -1; height: 8px; border-radius: 4px; width: 180px; }
+.legend3d span:last-child { text-align: right; }
+.legend3d .bar-t { background: linear-gradient(90deg, #0f8fc0, #e0482a); }
+.legend3d .bar-p { background: linear-gradient(90deg, #4b2f9c, #1f9e8f, #f4c542); }
+.fallback3d { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; padding: 24px; text-align: center; }
+.fallback3d b { font-family: var(--font-display); font-size: 1.3rem; }
+.fallback3d span { color: var(--muted); max-width: 44ch; }
 .mini3d label { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .mini3d output { color: var(--ink); text-transform: none; }
 
@@ -556,6 +574,42 @@ body.mode-present main, body.mode-present .topbar { visibility: hidden; }
 .mount #cycle li span { font-size: max(11px, 1.05cqw); }
 .mount .pwm-row { grid-template-columns: 7em minmax(0, 1fr) 4em; }
 .mount .stack-legend { font-size: max(12px, 1.35cqw); }
+
+.mount .legend3d { top: auto; bottom: 1cqw; right: 1cqw; font-size: max(12px, 1.05cqw); padding: 0.6cqw 1cqw; }
+.mount .legend3d b { font-size: max(12px, 1.1cqw); }
+.mount .legend3d i { width: 14cqw; height: 0.7cqw; }
+.mount .tag3d { font-size: max(13px, 1.15cqw); padding: 0.25cqw 0.8cqw; }
+
+/* tela da falha: só vazão, ΔT e CPU, em números grandes */
+.slide-fault .mount #gauges > :nth-child(2), .slide-fault .mount #gauges > :nth-child(3), .slide-fault .mount #gauges > :nth-child(4) { display: none; }
+.slide-fault .s-side { align-content: start; }
+.mount .alert { margin: 0; }
+
+/* lupa (segurar Z) */
+.deck-stage { overflow: hidden; }
+.deck.zooming .slide-frame { will-change: transform; }
+.deck.zooming .deck-stage { cursor: zoom-in; }
+
+/* capa com o 3D girando ao fundo */
+.slide-cover .cover-3d {
+  position: absolute; inset: 0 0 0 50%;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%); mask-image: linear-gradient(90deg, transparent, #000 22%);
+}
+.slide-cover > :not(.cover-3d) { position: relative; z-index: 1; max-width: 56%; }
+.slide-cover .s-hero { font-size: 4.8cqw; max-width: 56%; }
+.slide-cover .s-team { grid-template-columns: auto auto; }
+.cover-3d .mount, .cover-3d .stage3d { height: 100%; }
+.cover-3d .stage3d { border: 0; background: none; }
+.cover-3d .toolbar3d, .cover-3d .info3d, .cover-3d .legend3d, .cover-3d .mount .labels3d { display: none; }
+
+/* passos clicáveis da tela do circuito */
+.s-steps-3d button {
+  all: unset; cursor: pointer; display: block; padding: 0.4cqw 0.8cqw; margin-left: -0.8cqw; border-radius: 8px; font-size: inherit;
+}
+.s-steps-3d button:hover, .s-steps-3d button[aria-pressed="true"] { background: var(--glass); }
+.s-steps-3d button:focus-visible { outline: 2px solid var(--cold); }
+.s-steps-3d .s-step-all { list-style: none; margin-top: 0.4cqw; }
+.s-steps-3d .s-step-all button { color: var(--cold); font-weight: 600; }
 
 /* celular em pé: a tela vira uma coluna rolável em vez de 16:9 */
 @media (max-width: 760px) {

@@ -5,8 +5,14 @@ Trabalho A3 de **Sistemas Fluidomecânicos** (Universidade Potiguar, Prof. Dr. R
 O site é um simulador interativo do circuito de refrigeração líquida, feito em TypeScript:
 
 - **Bancada:** circuito animado com bomba, blocos da CPU e da GPU, radiador e sensores. Dá para controlar o PWM da bomba e das ventoinhas, a carga e o fluido.
-- **Dois modos:** **Apresentação** (`#apresentacao`), com 14 telas 16:9 no roteiro dos cinco integrantes, cronômetro de 15 min, notas do apresentador (N), tela cheia (F) e navegação por setas ou passador de slides; e **Estudo** (`#estudo`), a página completa descrita abaixo. As telas usam os componentes vivos da página (3D, circuito, gráficos, medidores) e os devolvem ao sair.
+- **Dois modos:** **Apresentação** (`#apresentacao`), com 15 telas 16:9 no roteiro dos cinco integrantes, cronômetro de 15 min, notas do apresentador (N), tela cheia (F), lupa (segure Z para ampliar em volta do mouse) e navegação por setas ou passador de slides; e **Estudo** (`#estudo`), a página completa descrita abaixo. As telas usam os componentes vivos da página (3D, circuito, gráficos, medidores) e os devolvem ao sair.
 - **Modelo 3D (Three.js):** o circuito montado em bancada, para girar, aproximar e clicar nas peças, com vista explodida e tela cheia. A água corre na velocidade do simulador e muda de cor com a temperatura.
+  - **Vistas guiadas:** teclas 0 a 5 (ou os passos da tela 3) levam a câmera até a bomba, o bloco da CPU, a GPU, o radiador e o reservatório.
+  - **Corte:** tira a tampa do bloco e mostra a água nos microcanais; acima dele, o perfil de velocidade passa de parábola (laminar) a achatado (turbulento) conforme Re.
+  - **Pressão:** colore as mangueiras pela pressão ao longo do circuito, da saída da bomba até a entrada (bloco 60 %, GPU 15 %, radiador 25 % da perda dos componentes — divisão didática).
+  - **Calor:** setas com largura proporcional aos watts da CPU, da GPU e do radiador.
+  - **Falhas visíveis:** bomba parada (partículas param, aviso), ar (bolhas), entupimento (acúmulo e marcador na entrada do bloco); chip acima de 70 °C brilha em vermelho.
+  - **Vitrine e modo leve:** na capa o modelo gira sozinho e volta a girar 12 s depois de alguém mexer; em computador lento a resolução e as sombras baixam (ou force com `?leve`). Sem WebGL, aparece um aviso com link para o circuito 2D.
 - **Escoamento:** número de Reynolds com visualização laminar/turbulento, continuidade e perdas de carga, com os valores da bancada.
 - **Curvas:** curva da bomba × curva do sistema, ponto de operação e leis de semelhança.
 - **Controle:** ciclo de medição, processamento e ação com PWM de 25 kHz.
