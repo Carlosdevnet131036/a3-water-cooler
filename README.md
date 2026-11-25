@@ -5,7 +5,7 @@ Trabalho A3 de **Sistemas Fluidomecânicos** (Universidade Potiguar, Prof. Dr. R
 O site é um simulador interativo do circuito de refrigeração líquida, feito em TypeScript:
 
 - **Bancada:** circuito animado com bomba, blocos da CPU e da GPU, radiador e sensores. Dá para controlar o PWM da bomba e das ventoinhas, a carga e o fluido.
-- **Dois modos:** **Apresentação** (`#apresentacao`), com 15 telas 16:9 no roteiro dos cinco integrantes, cronômetro de 15 min, notas do apresentador (N), tela cheia (F), lupa (segure Z para ampliar em volta do mouse) e navegação por setas ou passador de slides; e **Estudo** (`#estudo`), a página completa descrita abaixo. As telas usam os componentes vivos da página (3D, circuito, gráficos, medidores) e os devolvem ao sair.
+- **Dois modos:** **Apresentação** (`#apresentacao`), com 15 telas 16:9 no roteiro dos cinco integrantes, cronômetro de 15 min (começa ao sair da capa), notas do apresentador (N), tela cheia (F), tema claro de projeção ligado por padrão (T alterna), lupa (segure Z para ampliar em volta do mouse) e navegação por setas ou passador de slides. O endereço guarda a tela atual (`#apresentacao/6`): se a página recarregar, volta para a mesma tela; e **Estudo** (`#estudo`), a página completa descrita abaixo. As telas usam os componentes vivos da página (3D, circuito, gráficos, medidores) e os devolvem ao sair.
 - **Modelo 3D (Three.js):** o circuito montado em bancada, para girar, aproximar e clicar nas peças, com vista explodida e tela cheia. A água corre na velocidade do simulador e muda de cor com a temperatura.
   - **Vistas guiadas:** teclas 0 a 5 (ou os passos da tela 3) levam a câmera até a bomba, o bloco da CPU, a GPU, o radiador e o reservatório.
   - **Corte:** tira a tampa do bloco e mostra a água nos microcanais; acima dele, o perfil de velocidade passa de parábola (laminar) a achatado (turbulento) conforme Re.
@@ -36,7 +36,7 @@ npm run dev
 
 `npm run build` gera `dist/index.html`, um arquivo único com CSS e JS embutidos. O GitHub Pages é publicado automaticamente pelo workflow em `.github/workflows/pages.yml` a cada push na `main`.
 
-O arquivo gerado pode ser aberto diretamente no navegador, sem servidor. A simulação e os controles funcionam sem internet; as fontes externas são opcionais e têm alternativas locais. Não depende de serviços de telemetria ou sensores reais.
+O arquivo gerado pode ser aberto diretamente no navegador, sem servidor. **Plano B sem internet:** `docs/water-cooler-offline.html` é uma cópia pronta desse arquivo para levar no pendrive (abre com dois cliques); `npm run offline` gera de novo. A simulação e os controles funcionam sem internet; as fontes externas são opcionais e têm alternativas locais. Não depende de serviços de telemetria ou sensores reais.
 
 `npm test` verifica o ponto de operação, balanço hidráulico, ausência de circulação, estados de diagnóstico, proteções, recuperação e reinício. `npm run build` também valida os tipos TypeScript.
 

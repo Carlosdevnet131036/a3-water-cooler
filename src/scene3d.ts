@@ -646,7 +646,7 @@ export function initScene3d(container: HTMLElement, getState: () => SceneState):
       p -= segLoss + drops[seg.key];
     }
     const html = pressureOn
-      ? `<b>Pressão (relativa à entrada da bomba)</b><i class="bar-p"></i><span>0 Pa</span><span>${fmt(s.hyd.dpTotal, 0)} Pa</span>`
+      ? `<b>Pressão (relativa à entrada da bomba)</b><i class="bar-p"></i><span>0 Pa</span><span>${fmt(s.hyd.dpTotal, 0)} Pa</span><small>Divisão didática da perda nos componentes: bloco da CPU 60 %, GPU 15 %, radiador 25 %</small>`
       : `<b>Temperatura da água</b><i class="bar-t"></i><span>29 °C</span><span>43 °C</span>`;
     if (legend.innerHTML !== html) legend.innerHTML = html;
   }

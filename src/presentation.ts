@@ -391,6 +391,9 @@ export function initPresentation(api: Api) {
   }
   function go(i: number) {
     index = Math.max(0, Math.min(SLIDES.length - 1, i));
+    if (index > 0 && !started) started = Date.now(); // o cronômetro começa ao sair da capa
+    // guarda a tela no endereço: se a página recarregar, volta para a mesma tela
+    history.replaceState(null, "", `#apresentacao/${index + 1}`);
     render();
   }
 
@@ -399,12 +402,26 @@ export function initPresentation(api: Api) {
   const timer = $("#deckTimer");
   setInterval(() => {
     if (!open) return;
-    const s = Math.floor((Date.now() - started) / 1000);
+    const s = started ? Math.floor((Date.now() - started) / 1000) : 0;
     const mmss = (t: number) => `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
     timer.textContent = `${mmss(s)} / 15:00`;
     timer.classList.toggle("late", s >= 13 * 60);
   }, 500);
-  timer.addEventListener("click", () => (started = Date.now()));
+  timer.addEventListener("click", () => (started = index > 0 ? Date.now() : 0));
+  timer.title = "Começa ao sair da capa. Clique para zerar.";
+
+  // tema de projeção: ligado por padrão no modo apresentação; T alterna (a escolha fica salva no navegador)
+  const root = document.documentElement;
+  let themeBefore: string | null = null;
+  const readPref = () => { try { return localStorage.getItem("a3-projetor") !== "0"; } catch { return true; } };
+  function setProjector(on: boolean, save = false) {
+    if (on) root.dataset.theme = "projector";
+    else if (themeBefore) root.dataset.theme = themeBefore;
+    else delete root.dataset.theme;
+    $("#deckTheme").setAttribute("aria-pressed", String(on));
+    if (save) try { localStorage.setItem("a3-projetor", on ? "1" : "0"); } catch { /* navegador sem armazenamento */ }
+  }
+  $("#deckTheme").addEventListener("click", () => setProjector(root.dataset.theme !== "projector", true));
 
   function setNotes(show: boolean) {
     notesPanel.hidden = !show;
@@ -432,6 +449,7 @@ export function initPresentation(api: Api) {
     else if (k === "End") go(SLIDES.length - 1);
     else if (k === "n" || k === "N") setNotes(notesPanel.hidden);
     else if (k === "f" || k === "F") toggleFull();
+    else if (k === "t" || k === "T") setProjector(root.dataset.theme !== "projector", true);
   });
 
   // ---------- lupa: segurar Z amplia a tela em torno do mouse ----------
@@ -483,7 +501,9 @@ export function initPresentation(api: Api) {
 
   // ---------- troca de modo pelo endereço (#apresentacao / #estudo) ----------
   function route() {
-    const present = location.hash === "#apresentacao";
+    const m = /^#apresentacao(?:\/(\d+))?$/.exec(location.hash);
+    const present = !!m;
+    if (m?.[1] && present === open) { go(Number(m[1]) - 1); return; } // endereço com outra tela
     document.querySelectorAll(".mode-tab").forEach((a) =>
       a.toggleAttribute("aria-current", (a as HTMLElement).dataset.mode === (present ? "present" : "study")));
     if (present === open) return;
@@ -491,12 +511,16 @@ export function initPresentation(api: Api) {
     deck.hidden = !present;
     document.body.classList.toggle("mode-present", present);
     if (present) {
-      if (!started) started = Date.now();
+      themeBefore = root.dataset.theme ?? null;
+      setProjector(readPref());
+      index = m?.[1] ? Math.max(0, Math.min(SLIDES.length - 1, Number(m[1]) - 1)) : index;
+      if (index > 0 && !started) started = Date.now();
       render();
       ($("#deckNext") as HTMLButtonElement).focus({ preventScroll: true });
     } else {
       api.scene3d.showcase(false);
       setZoom(false);
+      setProjector(false);
       returnAll();
       stage.innerHTML = "";
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
